@@ -66,9 +66,26 @@ async function initNav() {
     <div class="topbar-inner">
       <a class="logo" href="/">toris<em>forum</em></a>
       <nav class="nav-links" id="nav-boards"><a href="/">Home</a></nav>
-      <div class="nav-user">${userHtml}</div>
+      <div class="nav-user">
+        <button class="theme-btn" id="theme-btn" title="toggle theme"></button>
+        ${userHtml}
+      </div>
     </div>`;
   document.body.prepend(bar);
+
+  const themeBtn = $('#theme-btn');
+  const paintThemeBtn = () => {
+    themeBtn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀' : '☾';
+  };
+  paintThemeBtn();
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch {}
+    paintThemeBtn();
+  });
 
   $('#logout-btn')?.addEventListener('click', async () => {
     await api('/api/logout', { method: 'POST' });
