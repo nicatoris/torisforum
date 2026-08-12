@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>settings · TORISFORUM</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="settings">
+  <main class="wrap">
+    <div class="win" style="max-width:640px;margin:40px auto 0">
+      <div class="win-title">profile_config.sys<div class="dots"><i></i><i></i><i></i></div></div>
+      <div class="win-body" style="padding:22px">
+        <div class="form-err"></div>
+        <div class="form-ok"></div>
+        <form id="settings-form">
+          <div class="field">
+            <label>avatar</label>
+            <div style="display:flex;align-items:center;gap:16px">
+              <div id="current-avatar"></div>
+              <label class="file-label" style="flex:1"><input type="file" id="avatar" accept="image/*"><span id="avatar-name">upload a new avatar (image, 8MB max)</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="tagline">tagline</label>
+            <input type="text" id="tagline" maxlength="60" placeholder="e.g. NIGHT SHIFT OPERATOR">
+            <div class="hint">short label shown under your name</div>
+          </div>
+          <div class="field">
+            <label for="bio">bio</label>
+            <textarea id="bio" maxlength="500" placeholder="who are you on the wire?"></textarea>
+          </div>
+          <div class="field">
+            <label>accent color</label>
+            <div class="color-pick" id="color-pick"></div>
+          </div>
+          <div class="field">
+            <label>profile decor</label>
+            <div class="decor-pick" id="decor-pick"></div>
+            <div class="hint">the banner pattern on your profile page</div>
+          </div>
+          <button class="btn primary" style="width:100%;justify-content:center">save changes</button>
+        </form>
+      </div>
+    </div>
+  </main>
+  <script src="/js/app.js"></script>
+</body>
+</html>

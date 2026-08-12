@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>log in · TORISFORUM</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="login">
+  <main class="wrap">
+    <div class="auth-box win">
+      <div class="win-title">auth.exe — log in<div class="dots"><i></i><i></i><i></i></div></div>
+      <div class="win-body">
+        <div class="form-err"></div>
+        <form id="auth-form">
+          <div class="field">
+            <label for="username">username</label>
+            <input type="text" id="username" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label for="password">password</label>
+            <input type="password" id="password" autocomplete="current-password" required>
+          </div>
+          <button class="btn primary" style="width:100%;justify-content:center">jack in →</button>
+        </form>
+      </div>
+    </div>
+    <div class="auth-foot">no account? <a href="/register">sign up</a> — it takes 10 seconds</div>
+  </main>
+  <script src="/js/app.js"></script>
+</body>
+</html>

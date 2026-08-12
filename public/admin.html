@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>admin · TORISFORUM</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="admin">
+  <main class="wrap">
+    <div id="admin-root">
+      <div class="sec-head" style="margin-top:36px"><h2>sysop panel <span class="sig">◢</span></h2><span class="tag">board management</span><div class="rule"></div></div>
+      <div class="two-col">
+        <div class="win">
+          <div class="win-title">boards.db<div class="dots"><i></i><i></i><i></i></div></div>
+          <div class="win-body">
+            <table class="admin-table">
+              <thead><tr><th>board</th><th>description</th><th>posts</th><th></th></tr></thead>
+              <tbody id="board-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="win">
+          <div class="win-title">create_board.exe<div class="dots"><i></i><i></i><i></i></div></div>
+          <div class="win-body">
+            <div class="form-err"></div>
+            <form id="board-form">
+              <div class="field">
+                <label for="b-name">board name</label>
+                <input type="text" id="b-name" maxlength="30" required placeholder="e.g. music">
+              </div>
+              <div class="field">
+                <label for="b-desc">description</label>
+                <input type="text" id="b-desc" maxlength="200" placeholder="what goes here?">
+              </div>
+              <div class="field">
+                <label>accent color</label>
+                <div class="color-pick" id="b-color-pick"></div>
+              </div>
+              <button class="btn primary" style="width:100%;justify-content:center">+ create board</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="/js/app.js"></script>
+</body>
+</html>

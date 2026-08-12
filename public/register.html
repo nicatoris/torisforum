@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sign up · TORISFORUM</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="register">
+  <main class="wrap">
+    <div class="auth-box win">
+      <div class="win-title">auth.exe — new user<div class="dots"><i></i><i></i><i></i></div></div>
+      <div class="win-body">
+        <div class="form-err"></div>
+        <form id="auth-form">
+          <div class="field">
+            <label for="username">pick a username</label>
+            <input type="text" id="username" autocomplete="username" required pattern="[a-zA-Z0-9_]{3,20}">
+            <div class="hint">3–20 chars · letters, numbers, underscores</div>
+          </div>
+          <div class="field">
+            <label for="password">password</label>
+            <input type="password" id="password" autocomplete="new-password" required minlength="8">
+            <div class="hint">at least 8 characters</div>
+          </div>
+          <button class="btn primary" style="width:100%;justify-content:center">create account →</button>
+        </form>
+      </div>
+    </div>
+    <div class="auth-foot">already in? <a href="/login">log in</a></div>
+  </main>
+  <script src="/js/app.js"></script>
+</body>
+</html>
