@@ -51,31 +51,44 @@ async function initNav() {
   } catch {
     ME = null;
   }
+  // one fixed-width shell wraps header, page body, and footer
+  const shell = document.createElement('div');
+  shell.id = 'shell';
+  const main = document.querySelector('main');
+  document.body.insertBefore(shell, main);
+
   const bar = document.createElement('header');
   bar.className = 'topbar';
   const userHtml = ME
-    ? `<a href="/user?u=${esc(ME.username)}" class="uname" style="display:flex;align-items:center;gap:8px">${avatarHtml(
-        ME
-      )}<span>${esc(ME.username)}</span></a>
-       ${ME.is_admin ? '<a class="btn ghost" href="/admin">Admin</a>' : ''}
-       <a class="btn ghost" href="/settings">Settings</a>
-       <button class="btn ghost" id="logout-btn">Log out</button>`
-    : `<a class="btn ghost" href="/login">Log in</a>
-       <a class="btn primary" href="/register">Sign up</a>`;
+    ? `<a href="/user?u=${esc(ME.username)}" class="uname cell-r">${avatarHtml(ME)}<span>${esc(
+        ME.username
+      )}</span></a>
+       ${ME.is_admin ? '<a class="cell-r" href="/admin">Admin</a>' : ''}
+       <a class="cell-r" href="/settings">Config</a>
+       <button class="cell-r" id="logout-btn">Exit</button>`
+    : `<a class="cell-r" href="/login">Login</a>
+       <a class="cell-r" href="/register">Register</a>`;
+  const d = new Date();
+  const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear()]
+    .map((n) => String(n).padStart(2, '0'))
+    .join('.');
   bar.innerHTML = `
-    <div class="topbar-inner">
+    <div class="mast-top">
       <a class="logo" href="/">toris<em>forum</em></a>
-      <nav class="nav-links" id="nav-boards"><a href="/">Home</a></nav>
-      <div class="nav-user">
-        <button class="theme-btn" id="theme-btn" title="toggle theme"></button>
-        ${userHtml}
-      </div>
-    </div>`;
-  document.body.prepend(bar);
+      <span class="mast-stamp">v4.0 // ${stamp} // <b>sys.online</b></span>
+    </div>
+    <nav class="navstrip" id="nav-boards">
+      <a href="/">Main</a>
+      <span class="sep"></span>
+      <button class="theme-btn cell-r" id="theme-btn" title="toggle display mode"></button>
+      ${userHtml}
+    </nav>`;
+  shell.appendChild(bar);
+  shell.appendChild(main);
 
   const themeBtn = $('#theme-btn');
   const paintThemeBtn = () => {
-    themeBtn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀' : '☾';
+    themeBtn.textContent = document.documentElement.dataset.theme === 'dark' ? '[ lite ]' : '[ dark ]';
   };
   paintThemeBtn();
   themeBtn.addEventListener('click', () => {
@@ -92,22 +105,23 @@ async function initNav() {
     location.href = '/';
   });
 
-  // board links in nav
+  // board links in nav, inserted before the spacer cell
   try {
     const { boards } = await api('/api/boards');
     const nav = $('#nav-boards');
+    const sep = nav.querySelector('.sep');
     for (const b of boards.slice(0, 6)) {
       const a = document.createElement('a');
       a.href = `/board?b=${encodeURIComponent(b.slug)}`;
       a.textContent = '/' + b.slug;
-      nav.appendChild(a);
+      nav.insertBefore(a, sep);
     }
   } catch {}
 
   const foot = document.createElement('footer');
   foot.className = 'footer';
-  foot.innerHTML = `<b>torisforum</b> &nbsp;·&nbsp; est. 2026 &nbsp;·&nbsp; ✦`;
-  document.body.appendChild(foot);
+  foot.innerHTML = `&copy; 2026 <b>torisforum</b> // all rights reserved // best viewed at 1024&times;768 or higher`;
+  shell.appendChild(foot);
 }
 
 /* ── post cards ── */
@@ -178,8 +192,11 @@ const PAGES = {
     const [{ newest, trending }, { boards }] = await Promise.all([api('/api/home'), api('/api/boards')]);
 
     $('#hero-cta').innerHTML = ME
-      ? `<a class="btn primary" href="/new">New post</a>`
-      : `<a class="btn primary" href="/register">Create an account</a><a class="btn" href="/login">Log in</a>`;
+      ? `<a class="btn primary" href="/new">&raquo; New post</a>`
+      : `<a class="btn primary" href="/register">&raquo; Create account</a><a class="btn" href="/login">Log in</a>`;
+
+    $('#hd-boards').textContent = String(boards.length).padStart(2, '0');
+    $('#hd-posts').textContent = String(boards.reduce((n, b) => n + b.post_count, 0)).padStart(4, '0');
 
     $('#boards-grid').innerHTML = boards.length
       ? boards
@@ -249,14 +266,12 @@ const PAGES = {
       const { board, posts } = await api(`/api/boards/${encodeURIComponent(slug)}/posts?sort=${sort}`);
       document.title = `/${board.slug} · TORISFORUM`;
       $('#board-head').innerHTML = `
-        <div class="hero" style="margin-top:26px;padding:30px 32px">
-          <h1 style="font-size:30px"><span style="color:${esc(board.accent)};-webkit-text-fill-color:${esc(
-        board.accent
-      )}">/</span>${esc(board.name)}</h1>
+        <div class="hero">
+          <h1 style="font-size:18px"><span style="color:${esc(board.accent)}">/</span>${esc(board.name)}</h1>
           <div class="sub">${esc(board.description)}</div>
           <div class="actions">${
             ME
-              ? `<a class="btn primary" href="/new?b=${esc(board.slug)}">New post</a>`
+              ? `<a class="btn primary" href="/new?b=${esc(board.slug)}">&raquo; New post</a>`
               : `<a class="btn" href="/login">Log in to post</a>`
           }</div>
         </div>`;
@@ -381,7 +396,7 @@ const PAGES = {
         </div>
       </div>
 
-      <div class="sec-head"><h2>Comments <span class="sig">${comments.length}</span></h2><div class="rule"></div></div>
+      <div class="sec-head"><h2>Replies <span class="sig">:: ${String(comments.length).padStart(2, '0')}</span></h2><div class="rule"></div></div>
       <div id="comment-form-slot"></div>
       <div id="comments"></div>`;
 
@@ -483,7 +498,7 @@ const PAGES = {
           </div>
         </div>
       </div>
-      <div class="sec-head"><h2>Posts</h2><div class="rule"></div></div>
+      <div class="sec-head"><h2>User.Posts</h2><span class="tag">${stats.posts} records</span><div class="rule"></div></div>
       <div id="profile-posts"></div>`;
 
     $('#profile-posts').innerHTML = posts.length
