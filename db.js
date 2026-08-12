@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   bio TEXT NOT NULL DEFAULT '',
   tagline TEXT NOT NULL DEFAULT '',
   avatar TEXT,
-  accent TEXT NOT NULL DEFAULT '#00f0ff',
+  accent TEXT NOT NULL DEFAULT '#2f6bff',
   decor TEXT NOT NULL DEFAULT 'grid',
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS boards (
   slug TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
-  accent TEXT NOT NULL DEFAULT '#00f0ff',
+  accent TEXT NOT NULL DEFAULT '#2f6bff',
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
@@ -82,9 +82,9 @@ if (!adminExists) {
   ).run(
     ADMIN_USERNAME,
     bcrypt.hashSync(ADMIN_PASSWORD, 10),
-    'sysop of torisforum. i run this place.',
-    'ADMINISTRATOR',
-    '#ff2ec4',
+    'Admin of torisforum.',
+    'administrator',
+    '#7c5cff',
     'stars'
   );
   console.log('[db] seeded admin account:', ADMIN_USERNAME);
@@ -93,9 +93,9 @@ if (!adminExists) {
 const boardCount = db.prepare('SELECT COUNT(*) AS n FROM boards').get().n;
 if (boardCount === 0) {
   const ins = db.prepare('INSERT INTO boards (slug, name, description, accent) VALUES (?, ?, ?, ?)');
-  ins.run('general', 'general', 'anything and everything. the main channel.', '#00f0ff');
-  ins.run('media', 'media', 'pics, clips, files. show us what you got.', '#ff2ec4');
-  ins.run('tech', 'tech', 'computers, code, gear, the machine.', '#b6ff00');
+  ins.run('general', 'general', 'Anything and everything — the main channel.', '#2f6bff');
+  ins.run('media', 'media', 'Pictures, clips, and files worth sharing.', '#ef5da8');
+  ins.run('tech', 'tech', 'Computers, code, and gear.', '#10b981');
   console.log('[db] seeded starter boards');
 }
 

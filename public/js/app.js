@@ -38,7 +38,7 @@ function avatarHtml(user, size = '') {
   if (user.avatar) {
     return `<img class="${cls}" src="${esc(user.avatar)}" alt="${esc(user.username)}">`;
   }
-  const accent = user.accent || user.user_accent || '#00f0ff';
+  const accent = user.accent || user.user_accent || '#2f6bff';
   return `<span class="${cls} avatar-fallback" style="background:${esc(accent)}">${esc(
     (user.username || '?')[0]
   )}</span>`;
@@ -57,15 +57,15 @@ async function initNav() {
     ? `<a href="/user?u=${esc(ME.username)}" class="uname" style="display:flex;align-items:center;gap:8px">${avatarHtml(
         ME
       )}<span>${esc(ME.username)}</span></a>
-       ${ME.is_admin ? '<a class="btn ghost" href="/admin">admin</a>' : ''}
-       <a class="btn ghost" href="/settings">settings</a>
-       <button class="btn ghost" id="logout-btn">log out</button>`
-    : `<a class="btn ghost" href="/login">log in</a>
-       <a class="btn primary" href="/register">sign up</a>`;
+       ${ME.is_admin ? '<a class="btn ghost" href="/admin">Admin</a>' : ''}
+       <a class="btn ghost" href="/settings">Settings</a>
+       <button class="btn ghost" id="logout-btn">Log out</button>`
+    : `<a class="btn ghost" href="/login">Log in</a>
+       <a class="btn primary" href="/register">Sign up</a>`;
   bar.innerHTML = `
     <div class="topbar-inner">
-      <a class="logo" href="/">TORIS<em>FORUM</em></a>
-      <nav class="nav-links" id="nav-boards"><a href="/">home</a></nav>
+      <a class="logo" href="/">toris<em>forum</em></a>
+      <nav class="nav-links" id="nav-boards"><a href="/">Home</a></nav>
       <div class="nav-user">${userHtml}</div>
     </div>`;
   document.body.prepend(bar);
@@ -89,7 +89,7 @@ async function initNav() {
 
   const foot = document.createElement('footer');
   foot.className = 'footer';
-  foot.innerHTML = `<b>TORISFORUM</b> · est. 2026 · running hot since boot · <span style="color:var(--cyan)">▮</span> sys.ok`;
+  foot.innerHTML = `<b>torisforum</b> &nbsp;·&nbsp; est. 2026 &nbsp;·&nbsp; ✦`;
   document.body.appendChild(foot);
 }
 
@@ -99,7 +99,7 @@ function postCardHtml(p, opts = {}) {
     p.attachment && (p.attachment_type || '').startsWith('image/')
       ? `<img class="post-thumb" src="${esc(p.attachment)}" alt="" loading="lazy">`
       : '';
-  const clip = p.attachment ? `<span class="clip">⎙ attachment</span>` : '';
+  const clip = p.attachment ? `<span class="clip">· attachment</span>` : '';
   const rank =
     opts.rank != null
       ? `<div class="rank ${opts.rank < 3 ? 'hot' : ''}">${String(opts.rank + 1).padStart(2, '0')}</div>`
@@ -123,7 +123,7 @@ function postCardHtml(p, opts = {}) {
       <a class="post-title" href="/post?id=${p.id}">${esc(p.title)}</a>
       ${p.body ? `<div class="post-snippet">${esc(p.body)}</div>` : ''}
       <div class="post-foot">
-        <span>▤ ${p.comment_count} comment${p.comment_count === 1 ? '' : 's'}</span>
+        <span>${p.comment_count} comment${p.comment_count === 1 ? '' : 's'}</span>
         ${clip}
       </div>
     </div>
@@ -161,8 +161,8 @@ const PAGES = {
     const [{ newest, trending }, { boards }] = await Promise.all([api('/api/home'), api('/api/boards')]);
 
     $('#hero-cta').innerHTML = ME
-      ? `<a class="btn primary" href="/new">+ new post</a>`
-      : `<a class="btn primary" href="/register">create account</a><a class="btn" href="/login">log in</a>`;
+      ? `<a class="btn primary" href="/new">New post</a>`
+      : `<a class="btn primary" href="/register">Create an account</a><a class="btn" href="/login">Log in</a>`;
 
     $('#boards-grid').innerHTML = boards.length
       ? boards
@@ -175,15 +175,15 @@ const PAGES = {
         </a>`
           )
           .join('')
-      : '<div class="empty">no boards yet</div>';
+      : '<div class="empty">No boards yet</div>';
 
     $('#trending-list').innerHTML = trending.length
       ? trending.map((p, i) => postCardHtml(p, { rank: i })).join('')
-      : '<div class="empty">nothing trending — be the spark</div>';
+      : '<div class="empty">Nothing trending yet — be the first</div>';
 
     $('#new-list').innerHTML = newest.length
       ? newest.map((p) => postCardHtml(p)).join('')
-      : '<div class="empty">dead air. post something.</div>';
+      : '<div class="empty">Quiet in here. Post something.</div>';
 
     bindLikeButtons();
   },
@@ -232,18 +232,20 @@ const PAGES = {
       const { board, posts } = await api(`/api/boards/${encodeURIComponent(slug)}/posts?sort=${sort}`);
       document.title = `/${board.slug} · TORISFORUM`;
       $('#board-head').innerHTML = `
-        <div class="hero" style="margin-top:26px;padding:24px 26px">
-          <h1 style="font-size:30px"><span style="color:${esc(board.accent)}">/</span>${esc(board.name)}</h1>
+        <div class="hero" style="margin-top:26px;padding:30px 32px">
+          <h1 style="font-size:30px"><span style="color:${esc(board.accent)};-webkit-text-fill-color:${esc(
+        board.accent
+      )}">/</span>${esc(board.name)}</h1>
           <div class="sub">${esc(board.description)}</div>
           <div class="actions">${
             ME
-              ? `<a class="btn primary" href="/new?b=${esc(board.slug)}">+ post to /${esc(board.slug)}</a>`
-              : `<a class="btn" href="/login">log in to post</a>`
+              ? `<a class="btn primary" href="/new?b=${esc(board.slug)}">New post</a>`
+              : `<a class="btn" href="/login">Log in to post</a>`
           }</div>
         </div>`;
       $('#board-posts').innerHTML = posts.length
         ? posts.map((p) => postCardHtml(p)).join('')
-        : '<div class="empty">this board is empty. make the first move.</div>';
+        : '<div class="empty">This board is empty — start it off.</div>';
       bindLikeButtons();
     }
 
@@ -278,8 +280,8 @@ const PAGES = {
     const fileInput = $('#attachment');
     fileInput.addEventListener('change', () => {
       $('#file-name').textContent = fileInput.files[0]
-        ? `⎙ ${fileInput.files[0].name}`
-        : 'drop a file — image, clip, whatever (8MB max)';
+        ? fileInput.files[0].name
+        : 'Attach a file — image, video, whatever (8MB max)';
     });
 
     $('#post-form').addEventListener('submit', async (e) => {
@@ -328,18 +330,18 @@ const PAGES = {
       } else {
         attach = `<div class="attachment-view"><a class="file-pill" href="${esc(post.attachment)}" download="${esc(
           post.attachment_name || 'file'
-        )}">⎙ ${esc(post.attachment_name || 'download file')}</a></div>`;
+        )}">↓ ${esc(post.attachment_name || 'Download file')}</a></div>`;
       }
     }
 
     const canDelete = ME && (ME.is_admin || ME.username === post.username);
 
     $('#post-root').innerHTML = `
-      <div class="crumbs"><a href="/">home</a> / <a href="/board?b=${esc(post.board_slug)}">/${esc(
+      <div class="crumbs"><a href="/">Home</a> / <a href="/board?b=${esc(post.board_slug)}">/${esc(
       post.board_slug
     )}</a> / post #${post.id}</div>
       <div class="win post-full">
-        <div class="win-title">post_${post.id}.txt<div class="dots"><i></i><i></i><i></i></div></div>
+        <div class="win-title">/${esc(post.board_slug)}<div class="dots"><i></i><i></i><i></i></div></div>
         <div class="win-body" style="padding:22px">
           <div class="post-meta">
             <a class="board-chip" style="--chip:${esc(post.board_accent)}" href="/board?b=${esc(
@@ -357,25 +359,25 @@ const PAGES = {
             <span class="n" data-like-count="${post.id}" style="color:var(--dim);font-size:12px">${
       post.like_count
     }</span>
-            ${canDelete ? `<button class="btn ghost danger" id="del-post" style="margin-left:auto">delete</button>` : ''}
+            ${canDelete ? `<button class="btn ghost danger" id="del-post" style="margin-left:auto">Delete</button>` : ''}
           </div>
         </div>
       </div>
 
-      <div class="sec-head"><h2>comments <span class="sig">${comments.length}</span></h2><div class="rule"></div></div>
+      <div class="sec-head"><h2>Comments <span class="sig">${comments.length}</span></h2><div class="rule"></div></div>
       <div id="comment-form-slot"></div>
       <div id="comments"></div>`;
 
     $('#comments').innerHTML = comments.length
       ? comments.map(commentHtml).join('')
-      : '<div class="empty">no comments yet. say something.</div>';
+      : '<div class="empty">No comments yet — say something.</div>';
 
     $('#comment-form-slot').innerHTML = ME
       ? `<form id="comment-form" style="display:flex;gap:10px;margin-bottom:18px">
-           <textarea id="comment-body" placeholder="type your reply…" style="min-height:60px;flex:1"></textarea>
-           <button class="btn primary" style="align-self:flex-end">send</button>
+           <textarea id="comment-body" placeholder="Write a reply…" style="min-height:60px;flex:1"></textarea>
+           <button class="btn primary" style="align-self:flex-end">Reply</button>
          </form>`
-      : `<div class="empty" style="padding:18px;margin-bottom:18px"><a href="/login">log in</a> to join the thread</div>`;
+      : `<div class="empty" style="padding:18px;margin-bottom:18px"><a href="/login">Log in</a> to join the conversation</div>`;
 
     $('#comment-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -395,7 +397,7 @@ const PAGES = {
     });
 
     $('#del-post')?.addEventListener('click', async () => {
-      if (!confirm('delete this post permanently?')) return;
+      if (!confirm('Delete this post permanently?')) return;
       await api(`/api/posts/${post.id}`, { method: 'DELETE' });
       location.href = `/board?b=${post.board_slug}`;
     });
@@ -428,7 +430,7 @@ const PAGES = {
     }
     const { user, posts, stats } = data;
     document.title = `@${user.username} · TORISFORUM`;
-    const accent = user.accent || '#00f0ff';
+    const accent = user.accent || '#2f6bff';
 
     $('#profile-root').innerHTML = `
       <div class="profile-head" style="--p-accent:${esc(accent)};--p-glow:color-mix(in srgb, ${esc(
@@ -441,7 +443,7 @@ const PAGES = {
             <div style="padding-bottom:6px">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <span class="profile-name" style="font-family:var(--font-head)">${esc(user.username)}</span>
-                ${user.is_admin ? '<span class="admin-badge">SYSOP</span>' : ''}
+                ${user.is_admin ? '<span class="admin-badge">ADMIN</span>' : ''}
               </div>
               <div style="display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap">
                 ${user.tagline ? `<span class="profile-tagline">${esc(user.tagline)}</span>` : ''}
@@ -452,7 +454,7 @@ const PAGES = {
             </div>
             ${
               ME && ME.username === user.username
-                ? '<a class="btn ghost" href="/settings" style="margin-left:auto;align-self:center">edit profile</a>'
+                ? '<a class="btn" href="/settings" style="margin-left:auto;align-self:center">Edit profile</a>'
                 : ''
             }
           </div>
@@ -460,23 +462,23 @@ const PAGES = {
           <div class="profile-stats">
             <div class="stat"><b>${stats.posts}</b><span>posts</span></div>
             <div class="stat"><b>${stats.comments}</b><span>comments</span></div>
-            <div class="stat"><b>${stats.likes_received}</b><span>likes recv'd</span></div>
+            <div class="stat"><b>${stats.likes_received}</b><span>likes received</span></div>
           </div>
         </div>
       </div>
-      <div class="sec-head"><h2>transmissions</h2><div class="rule"></div></div>
+      <div class="sec-head"><h2>Posts</h2><div class="rule"></div></div>
       <div id="profile-posts"></div>`;
 
     $('#profile-posts').innerHTML = posts.length
       ? posts.map((p) => postCardHtml(p)).join('')
-      : '<div class="empty">radio silence</div>';
+      : '<div class="empty">No posts yet</div>';
     bindLikeButtons();
   },
 
   /* ── settings ── */
   async settings() {
     if (!ME) return (location.href = '/login');
-    const COLORS = ['#00f0ff', '#ff2ec4', '#b6ff00', '#ffb300', '#a26bff', '#ff4757', '#00ff9d', '#5ea8ff'];
+    const COLORS = ['#2f6bff', '#7c5cff', '#ef5da8', '#f59e0b', '#10b981', '#0ea5e9', '#64748b', '#1f2937'];
     const DECORS = ['grid', 'stars', 'waves', 'circuit', 'static', 'none'];
     let accent = ME.accent;
     let decor = ME.decor;
@@ -536,7 +538,7 @@ const PAGES = {
         if (avatarInput.files[0]) fd.append('avatar', avatarInput.files[0]);
         const { user } = await api('/api/profile', { method: 'POST', body: fd });
         ME = user;
-        ok.textContent = 'saved. looking good.';
+        ok.textContent = 'Saved — looking good.';
         ok.classList.add('show');
       } catch (ex) {
         showErr(err, ex.message);
@@ -548,11 +550,11 @@ const PAGES = {
   async admin() {
     if (!ME) return (location.href = '/login');
     if (!ME.is_admin) {
-      $('#admin-root').innerHTML = '<div class="empty" style="margin-top:40px">restricted zone. admins only.</div>';
+      $('#admin-root').innerHTML = '<div class="empty" style="margin-top:40px">This area is for admins only.</div>';
       return;
     }
-    let accent = '#00f0ff';
-    const COLORS = ['#00f0ff', '#ff2ec4', '#b6ff00', '#ffb300', '#a26bff', '#ff4757', '#00ff9d', '#5ea8ff'];
+    let accent = '#2f6bff';
+    const COLORS = ['#2f6bff', '#7c5cff', '#ef5da8', '#f59e0b', '#10b981', '#0ea5e9', '#64748b', '#1f2937'];
     $('#b-color-pick').innerHTML = COLORS.map(
       (c) =>
         `<div class="cswatch ${c === accent ? 'sel' : ''}" data-c="${c}" style="background:${c};color:${c}"></div>`
@@ -579,7 +581,7 @@ const PAGES = {
         .join('');
       $$('[data-del-board]').forEach((btn) =>
         btn.addEventListener('click', async () => {
-          if (!confirm('delete this board AND all its posts?')) return;
+          if (!confirm('Delete this board AND all its posts?')) return;
           await api(`/api/boards/${btn.dataset.delBoard}`, { method: 'DELETE' });
           loadBoards();
         })

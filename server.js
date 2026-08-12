@@ -174,7 +174,7 @@ app.post('/api/boards', requireAdmin, (req, res) => {
   if (db.prepare('SELECT id FROM boards WHERE slug = ?').get(slug)) {
     return res.status(409).json({ error: 'a board with that name already exists.' });
   }
-  const safeAccent = /^#[0-9a-fA-F]{6}$/.test(accent || '') ? accent : '#00f0ff';
+  const safeAccent = /^#[0-9a-fA-F]{6}$/.test(accent || '') ? accent : '#2f6bff';
   const info = db
     .prepare('INSERT INTO boards (slug, name, description, accent) VALUES (?, ?, ?, ?)')
     .run(slug, name.trim(), String(description || '').slice(0, 200), safeAccent);

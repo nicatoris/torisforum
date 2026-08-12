@@ -1,7 +1,8 @@
-# TORISFORUM ⚡
+# torisforum ✦
 
-A cyber/y2k social forum. Boards, posts with attachments, likes, comments,
-trending feed, and customizable profiles — all saved to a real backend.
+A sleek social forum with y2k undertones. Boards, posts with attachments,
+likes, comments, a trending feed, and customizable profiles — all saved to
+a real backend.
 
 ## Run it
 
