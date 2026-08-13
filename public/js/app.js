@@ -64,23 +64,24 @@ async function initNav() {
         ME.username
       )}</span></a>
        ${ME.is_admin ? '<a class="cell-r" href="/admin">Admin</a>' : ''}
-       <a class="cell-r" href="/settings">Config</a>
-       <button class="cell-r" id="logout-btn">Exit</button>`
-    : `<a class="cell-r" href="/login">Login</a>
-       <a class="cell-r" href="/register">Register</a>`;
-  const d = new Date();
-  const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear()]
-    .map((n) => String(n).padStart(2, '0'))
-    .join('.');
+       <a class="cell-r" href="/settings">Settings</a>
+       <button class="cell-r" id="logout-btn">Log out</button>`
+    : `<a class="cell-r" href="/login">Log in</a>
+       <a class="cell-r" href="/register">Sign up</a>`;
+  const stamp = new Date().toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
   bar.innerHTML = `
     <div class="mast-top">
       <a class="logo" href="/">toris<em>forum</em></a>
-      <span class="mast-stamp">v4.0 // ${stamp} // <b>sys.online</b></span>
+      <span class="mast-stamp">${stamp}</span>
     </div>
     <nav class="navstrip" id="nav-boards">
-      <a href="/">Main</a>
+      <a href="/">Home</a>
       <span class="sep"></span>
-      <button class="theme-btn cell-r" id="theme-btn" title="toggle display mode"></button>
+      <button class="theme-btn cell-r" id="theme-btn" title="switch display theme"></button>
       ${userHtml}
     </nav>`;
   shell.appendChild(bar);
@@ -88,7 +89,7 @@ async function initNav() {
 
   const themeBtn = $('#theme-btn');
   const paintThemeBtn = () => {
-    themeBtn.textContent = document.documentElement.dataset.theme === 'dark' ? '[ lite ]' : '[ dark ]';
+    themeBtn.textContent = document.documentElement.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode';
   };
   paintThemeBtn();
   themeBtn.addEventListener('click', () => {
@@ -120,7 +121,7 @@ async function initNav() {
 
   const foot = document.createElement('footer');
   foot.className = 'footer';
-  foot.innerHTML = `&copy; 2026 <b>torisforum</b> // all rights reserved // best viewed at 1024&times;768 or higher`;
+  foot.innerHTML = `&copy; 2026 <b>torisforum</b> &middot; all rights reserved`;
   shell.appendChild(foot);
 }
 
@@ -192,11 +193,11 @@ const PAGES = {
     const [{ newest, trending }, { boards }] = await Promise.all([api('/api/home'), api('/api/boards')]);
 
     $('#hero-cta').innerHTML = ME
-      ? `<a class="btn primary" href="/new">&raquo; New post</a>`
-      : `<a class="btn primary" href="/register">&raquo; Create account</a><a class="btn" href="/login">Log in</a>`;
+      ? `<a class="btn primary" href="/new">New post</a>`
+      : `<a class="btn primary" href="/register">Create an account</a><a class="btn" href="/login">Log in</a>`;
 
-    $('#hd-boards').textContent = String(boards.length).padStart(2, '0');
-    $('#hd-posts').textContent = String(boards.reduce((n, b) => n + b.post_count, 0)).padStart(4, '0');
+    $('#hd-boards').textContent = boards.length;
+    $('#hd-posts').textContent = boards.reduce((n, b) => n + b.post_count, 0);
 
     $('#boards-grid').innerHTML = boards.length
       ? boards
@@ -271,7 +272,7 @@ const PAGES = {
           <div class="sub">${esc(board.description)}</div>
           <div class="actions">${
             ME
-              ? `<a class="btn primary" href="/new?b=${esc(board.slug)}">&raquo; New post</a>`
+              ? `<a class="btn primary" href="/new?b=${esc(board.slug)}">New post</a>`
               : `<a class="btn" href="/login">Log in to post</a>`
           }</div>
         </div>`;
@@ -396,7 +397,7 @@ const PAGES = {
         </div>
       </div>
 
-      <div class="sec-head"><h2>Replies <span class="sig">:: ${String(comments.length).padStart(2, '0')}</span></h2><div class="rule"></div></div>
+      <div class="sec-head"><h2>Comments (${comments.length})</h2><div class="rule"></div></div>
       <div id="comment-form-slot"></div>
       <div id="comments"></div>`;
 
@@ -498,7 +499,7 @@ const PAGES = {
           </div>
         </div>
       </div>
-      <div class="sec-head"><h2>User.Posts</h2><span class="tag">${stats.posts} records</span><div class="rule"></div></div>
+      <div class="sec-head"><h2>Posts by ${esc(user.username)}</h2><span class="tag">${stats.posts} total</span><div class="rule"></div></div>
       <div id="profile-posts"></div>`;
 
     $('#profile-posts').innerHTML = posts.length
