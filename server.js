@@ -9,7 +9,8 @@ const db = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
+const IS_PROD = process.env.NODE_ENV === 'production';
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const upload = multer({
@@ -23,6 +24,7 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 },
 });
 
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOAD_DIR));
@@ -71,7 +73,7 @@ function setSession(res, userId) {
   db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').run(token, userId);
   res.setHeader(
     'Set-Cookie',
-    `session=${token}; HttpOnly; Path=/; Max-Age=${SESSION_MAX_AGE}; SameSite=Lax`
+    `session=${token}; HttpOnly; Path=/; Max-Age=${SESSION_MAX_AGE}; SameSite=Lax${IS_PROD ? '; Secure' : ''}`
   );
 }
 
@@ -145,7 +147,7 @@ app.post('/api/login', (req, res) => {
 app.post('/api/logout', (req, res) => {
   const token = parseCookies(req).session;
   if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-  res.setHeader('Set-Cookie', 'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
+  res.setHeader('Set-Cookie', `session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${IS_PROD ? '; Secure' : ''}`);
   res.json({ ok: true });
 });
 

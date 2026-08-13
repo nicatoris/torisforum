@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: torisforum
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data/db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+    disk:
+      name: torisforum-data
+      mountPath: /var/data
+      sizeGB: 1

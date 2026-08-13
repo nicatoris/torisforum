@@ -3,7 +3,7 @@ const fs = require('fs');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new Database(path.join(DATA_DIR, 'forum.db'));
@@ -72,8 +72,8 @@ CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at ASC
 `);
 
 // ---- seed admin + starter boards ----
-const ADMIN_USERNAME = 'nicatoris';
-const ADMIN_PASSWORD = 'Nicatorisjapan1!';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'nicatoris';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Nicatorisjapan1!';
 
 const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get(ADMIN_USERNAME);
 if (!adminExists) {
