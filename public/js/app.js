@@ -63,16 +63,17 @@ async function initNav() {
 
   const bar = document.createElement('header');
   bar.className = 'topbar';
+  // Action buttons grouped together, with the profile chip last — it is now
+  // the way in to profile editing, since Settings left the toolbar.
   const userHtml = ME
-    ? `<a href="/user?u=${esc(ME.username)}" class="uname cell-r">${avatarHtml(ME)}<span>${esc(
-        ME.username
-      )}</span></a>
-       <a class="cell-r" href="/activity">Activity${
+    ? `<a class="cell-r" href="/activity">Activity${
          UNREAD ? ` <span class="notif-count">${UNREAD > 99 ? '99+' : UNREAD}</span>` : ''
        }</a>
        ${ME.is_admin ? '<a class="cell-r" href="/admin">Admin</a>' : ''}
-       <a class="cell-r" href="/settings">Settings</a>
-       <button class="cell-r" id="logout-btn">Log out</button>`
+       <button class="cell-r" id="logout-btn">Log out</button>
+       <a href="/user?u=${esc(ME.username)}" class="uname cell-r">${avatarHtml(ME)}<span>${esc(
+        ME.username
+      )}</span></a>`
     : `<a class="cell-r" href="/login">Log in</a>
        <a class="cell-r" href="/register">Sign up</a>`;
   const stamp = new Date().toLocaleDateString(undefined, {
@@ -85,18 +86,25 @@ async function initNav() {
       <a class="logo" href="/">vip<em>net</em></a>
       <span class="mast-stamp">${stamp}</span>
     </div>
-    <nav class="navstrip" id="nav-boards">
+    <nav class="navstrip">
       <a href="/">Home</a>
+      <button id="boards-btn" aria-haspopup="true" aria-expanded="false">Boards <span class="caret">▾</span></button>
       <span class="sep"></span>
-      <button class="theme-btn cell-r" id="theme-btn" title="switch display theme"></button>
+      <button class="theme-btn cell-r" id="theme-btn"></button>
       ${userHtml}
-    </nav>`;
+    </nav>
+    <div class="board-menu" id="board-menu" hidden></div>`;
   shell.appendChild(bar);
   shell.appendChild(main);
 
   const themeBtn = $('#theme-btn');
   const paintThemeBtn = () => {
-    themeBtn.textContent = document.documentElement.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode';
+    const dark = document.documentElement.dataset.theme === 'dark';
+    // Show the mode you would switch to.
+    themeBtn.textContent = dark ? '☀' : '☾';
+    const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    themeBtn.title = label;
+    themeBtn.setAttribute('aria-label', label);
   };
   paintThemeBtn();
   themeBtn.addEventListener('click', () => {
@@ -113,18 +121,56 @@ async function initNav() {
     location.href = '/';
   });
 
-  // board links in nav, inserted before the spacer cell
+  // ── boards dropdown ──
+  const boardsBtn = $('#boards-btn');
+  const boardMenu = $('#board-menu');
+
+  const closeBoardMenu = () => {
+    boardMenu.hidden = true;
+    boardsBtn.setAttribute('aria-expanded', 'false');
+    boardsBtn.classList.remove('open');
+  };
+  const openBoardMenu = () => {
+    // Anchor under the button. The menu sits outside .navstrip because that
+    // strip scrolls horizontally and would clip it.
+    const btn = boardsBtn.getBoundingClientRect();
+    const host = bar.getBoundingClientRect();
+    boardMenu.style.left = Math.max(0, btn.left - host.left) + 'px';
+    boardMenu.hidden = false;
+    boardsBtn.setAttribute('aria-expanded', 'true');
+    boardsBtn.classList.add('open');
+  };
+
+  boardsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    boardMenu.hidden ? openBoardMenu() : closeBoardMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (!boardMenu.hidden && !boardMenu.contains(e.target)) closeBoardMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !boardMenu.hidden) {
+      closeBoardMenu();
+      boardsBtn.focus();
+    }
+  });
+  window.addEventListener('resize', closeBoardMenu);
+
   try {
     const { boards } = await api('/api/boards');
-    const nav = $('#nav-boards');
-    const sep = nav.querySelector('.sep');
-    for (const b of boards.slice(0, 6)) {
-      const a = document.createElement('a');
-      a.href = `/board?b=${encodeURIComponent(b.slug)}`;
-      a.textContent = '/' + b.slug;
-      nav.insertBefore(a, sep);
-    }
-  } catch {}
+    boardMenu.innerHTML = boards.length
+      ? boards
+          .map(
+            (b) =>
+              `<a href="/board?b=${encodeURIComponent(b.slug)}"><span class="bm-dot" style="background:${esc(
+                b.accent
+              )}"></span>/${esc(b.slug)}<span class="bm-count">${b.post_count}</span></a>`
+          )
+          .join('')
+      : '<div class="bm-empty">No boards yet</div>';
+  } catch {
+    boardMenu.innerHTML = '<div class="bm-empty">Could not load boards</div>';
+  }
 
   const foot = document.createElement('footer');
   foot.className = 'footer';
