@@ -44,10 +44,14 @@ mounted at `/var/data`, then set the environment variables
 | `ADMIN_PASSWORD` | (see `db.js`)      | Admin password seeded on first boot |
 | `NODE_ENV`       | —                  | Set `production` for Secure cookies |
 
-> **Important:** the admin account is only created on first boot, when the
-> database is empty. Set `ADMIN_PASSWORD` before the first deploy — the
-> default is visible in this repo's source, so anyone could log in as
-> admin if you keep it.
+> **Important:** the default admin password is visible in this repo's
+> source, so set `ADMIN_PASSWORD` to something of your own.
+>
+> Setting `ADMIN_PASSWORD` works at any time, not just on the first
+> deploy: whenever the server starts with that variable set, it updates
+> the admin account to match and signs out that account's existing
+> sessions, so a leaked or forgotten password can be rotated by adding
+> the variable and redeploying. Posts, boards, and members are untouched.
 
 ## What's inside
 

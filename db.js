@@ -113,7 +113,9 @@ CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followee_id);
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'nicatoris';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Nicatorisjapan1!';
 
-const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get(ADMIN_USERNAME);
+const adminExists = db
+  .prepare('SELECT id, password_hash FROM users WHERE username = ?')
+  .get(ADMIN_USERNAME);
 if (!adminExists) {
   db.prepare(
     'INSERT INTO users (username, password_hash, is_admin, bio, tagline, accent, decor) VALUES (?, ?, 1, ?, ?, ?, ?)'
@@ -126,6 +128,18 @@ if (!adminExists) {
     'stars'
   );
   console.log('[db] seeded admin account:', ADMIN_USERNAME);
+} else if (process.env.ADMIN_PASSWORD) {
+  // The operator set ADMIN_PASSWORD explicitly. Apply it to the existing
+  // account so a forgotten or leaked password can be rotated by redeploying,
+  // and drop that account's sessions so any old login is cut off.
+  if (!bcrypt.compareSync(process.env.ADMIN_PASSWORD, adminExists.password_hash)) {
+    db.prepare('UPDATE users SET password_hash = ?, is_admin = 1 WHERE id = ?').run(
+      bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10),
+      adminExists.id
+    );
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(adminExists.id);
+    console.log('[db] updated password for admin account:', ADMIN_USERNAME);
+  }
 }
 
 const boardCount = db.prepare('SELECT COUNT(*) AS n FROM boards').get().n;
