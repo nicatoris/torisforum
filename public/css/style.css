@@ -66,6 +66,8 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   font: 11px/1.55 var(--font);
   color: var(--text);
@@ -209,6 +211,8 @@ h1, h2, h3 { font-family: var(--font); }
 .win-title .dots i { width: 5px; height: 5px; background: var(--head-dim); display: block; opacity: 0.6; }
 .win-title .dots i:first-child { background: var(--accent); opacity: 1; }
 .win-body { padding: 12px; }
+.win-body.roomy { padding: 22px; }
+.form-win { max-width: 640px; margin: 40px auto 0; }
 
 /* ── banner (home + board headers) ── */
 .hero {
@@ -566,6 +570,9 @@ textarea { resize: vertical; min-height: 100px; }
 .file-pill:hover { color: var(--accent); text-decoration: none; }
 
 /* comments */
+.comment-form { display: flex; gap: 10px; margin-bottom: 18px; }
+.comment-form textarea { min-height: 60px; flex: 1; }
+.comment-form .btn { align-self: flex-end; }
 .comment {
   display: flex;
   gap: 9px;
@@ -615,7 +622,10 @@ textarea { resize: vertical; min-height: 100px; }
   max-width: 560px;
   white-space: pre-wrap;
 }
-.profile-stats { display: flex; gap: 0; margin-top: 11px; border: 1px solid var(--line); width: fit-content; }
+.avatar-edit-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.avatar-edit-row .file-label { flex: 1; min-width: 180px; }
+
+.profile-stats { display: flex; flex-wrap: wrap; gap: 0; margin-top: 11px; border: 1px solid var(--line); width: fit-content; }
 .profile-stats .stat {
   padding: 6px 16px 5px;
   border-right: 1px solid var(--line);
@@ -830,7 +840,96 @@ label.file-label:hover { border-color: var(--accent2); color: var(--accent2); }
 
 .theme-btn { /* rendered inside navstrip; base styles come from .navstrip button */ }
 
-@media (max-width: 640px) {
-  .post-thumb { display: none; }
-  body { padding: 8px 4px 20px; }
+/* ── mobile ── */
+@media (max-width: 700px) {
+  body {
+    padding: 0;
+    font-size: 13px;
+    background-attachment: scroll; /* fixed backgrounds jank on iOS */
+  }
+  #shell {
+    width: 100%;
+    margin: 0;
+    border-left: 0;
+    border-right: 0;
+    outline: none;
+    box-shadow: none;
+    min-height: 100vh;
+  }
+  .wrap { padding: 10px 10px 24px; }
+
+  /* masthead + nav: bigger touch targets, date stamp goes */
+  .mast-top { padding: 12px; }
+  .mast-stamp { display: none; }
+  .logo { font-size: 15px; letter-spacing: 4px; }
+  .navstrip a, .navstrip button {
+    font-size: 12px;
+    padding: 11px 13px 10px;
+  }
+
+  /* controls */
+  .btn { font-size: 12px; padding: 9px 16px 8px; }
+  .like-btn { width: 36px; height: 32px; font-size: 15px; }
+  .vote { min-width: 36px; }
+  .sort-tabs button { font-size: 12px; padding: 9px 16px 8px; }
+  .theme-btn { font-size: 12px; }
+  .md-toolbar button { font-size: 12px; padding: 8px 12px 7px; min-width: 34px; }
+  .color-pick .cswatch { width: 32px; height: 32px; }
+  .decor-pick .swatch { width: 84px; height: 54px; }
+
+  /* forms: 16px inputs stop iOS zoom-on-focus */
+  input[type='text'], input[type='password'], input[type='number'], textarea, select {
+    font-size: 16px;
+    padding: 9px 11px;
+  }
+  .field label { font-size: 11px; }
+  .hint { font-size: 11px; }
+  .form-err, .form-ok { font-size: 12px; }
+  .win-body.roomy { padding: 14px; }
+  .auth-box { margin-top: 20px; }
+  .form-win { margin-top: 12px; }
+
+  /* text sizes up for small screens */
+  .post-title { font-size: 14px; }
+  .post-snippet { font-size: 12px; }
+  .post-meta { font-size: 11px; }
+  .post-foot { font-size: 11px; }
+  .post-thumb { width: 56px; height: 56px; }
+  .rank { font-size: 12px; min-width: 18px; padding-top: 7px; }
+  .post-body { font-size: 14px; }
+  .post-body code, .post-body pre code { font-size: 12.5px; }
+  .post-full h1 { font-size: 17px; }
+  .comment .c-body { font-size: 13.5px; }
+  .comment .c-meta { font-size: 11px; }
+  .notif-text { font-size: 12.5px; }
+  .notif-time { font-size: 10px; }
+  .empty, .loading { font-size: 12px; }
+  .board-card .bdesc { font-size: 12px; min-height: 0; }
+  .board-card .bcount { font-size: 10.5px; }
+  .admin-table { font-size: 12px; }
+  .footer { font-size: 11px; }
+  .crumbs { font-size: 11px; }
+
+  /* hero + sections */
+  .hero { padding: 16px 14px; }
+  .hero h1 { font-size: 20px; letter-spacing: 3px; }
+  .hero .sub { font-size: 12.5px; }
+  .sec-head { flex-wrap: wrap; row-gap: 2px; }
+  .sec-head h2 { font-size: 12px; }
+  .sec-head .tag { font-size: 10.5px; }
+
+  /* profile */
+  .profile-info { padding: 0 12px 14px; }
+  .profile-name { font-size: 15px; }
+  .profile-bio { font-size: 12.5px; }
+  .profile-stats { width: 100%; }
+  .profile-stats .stat { flex: 1 1 33%; padding: 6px 4px 5px; border-top: 1px solid var(--line); margin-top: -1px; }
+  .profile-stats .stat span { font-size: 8.5px; }
+  .avatar.lg { width: 60px; height: 60px; }
+  .avatar-fallback.lg { font-size: 22px; }
+
+  /* stacked reply box, scrollable tables */
+  .comment-form { flex-direction: column; }
+  .comment-form .btn { align-self: stretch; justify-content: center; text-align: center; }
+  .win-body { overflow-x: auto; }
 }

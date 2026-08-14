@@ -428,7 +428,7 @@ const PAGES = {
     )}</a> / post #${post.id}</div>
       <div class="win post-full">
         <div class="win-title">/${esc(post.board_slug)}<div class="dots"><i></i><i></i><i></i></div></div>
-        <div class="win-body" style="padding:22px">
+        <div class="win-body roomy">
           <div class="post-meta">
             <a class="board-chip" style="--chip:${esc(post.board_accent)}" href="/board?b=${esc(
       post.board_slug
@@ -459,9 +459,9 @@ const PAGES = {
       : '<div class="empty">No comments yet — say something.</div>';
 
     $('#comment-form-slot').innerHTML = ME
-      ? `<form id="comment-form" style="display:flex;gap:10px;margin-bottom:18px">
-           <textarea id="comment-body" placeholder="Write a reply…" style="min-height:60px;flex:1"></textarea>
-           <button class="btn primary" style="align-self:flex-end">Reply</button>
+      ? `<form id="comment-form" class="comment-form">
+           <textarea id="comment-body" placeholder="Write a reply…"></textarea>
+           <button class="btn primary">Reply</button>
          </form>`
       : `<div class="empty" style="padding:18px;margin-bottom:18px"><a href="/login">Log in</a> to join the conversation</div>`;
 
