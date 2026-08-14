@@ -45,7 +45,22 @@
         </div>
       </div>
 
-      <div class="sec-head" style="margin-top:20px"><h2>Badges</h2><span class="tag">awarded automatically when members meet the condition</span><div class="rule"></div></div>
+      <div class="sec-head" style="margin-top:20px"><h2>Homepage</h2><span class="tag">the text under the title</span><div class="rule"></div></div>
+      <div class="win">
+        <div class="win-body">
+          <div class="form-err" id="home-err"></div>
+          <div class="form-ok" id="home-ok"></div>
+          <form id="home-form">
+            <div class="field">
+              <label for="home-text-input">Text shown between the title and the New post button</label>
+              <textarea id="home-text-input" maxlength="400" style="min-height:70px"></textarea>
+            </div>
+            <button class="btn primary">Save homepage text</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="sec-head" style="margin-top:20px"><h2>Badges</h2><span class="tag">automatic, or handed out by you</span><div class="rule"></div></div>
       <div class="two-col">
         <div class="win">
           <div class="win-title">Your badges<div class="dots"><i></i><i></i><i></i></div></div>
@@ -79,7 +94,7 @@
                   <select id="bd-cond" style="flex:1"></select>
                   <input type="number" id="bd-threshold" min="1" value="1" style="width:80px" title="How many">
                 </div>
-                <div class="hint">The badge is granted once the number is reached — checked automatically, and existing members who already qualify get it right away.</div>
+                <div class="hint" id="bd-cond-hint">The badge is granted once the number is reached — checked automatically, and existing members who already qualify get it right away.</div>
               </div>
               <div class="field">
                 <label>Color</label>
@@ -88,6 +103,26 @@
               <button class="btn primary" style="width:100%;justify-content:center">Create badge</button>
             </form>
           </div>
+        </div>
+      </div>
+
+      <div class="win" style="margin-top:12px">
+        <div class="win-title">Give a badge to someone<div class="dots"><i></i><i></i><i></i></div></div>
+        <div class="win-body">
+          <div class="form-err" id="award-err"></div>
+          <div class="form-ok" id="award-ok"></div>
+          <form id="award-form" class="award-form">
+            <div class="field" style="margin-bottom:0;flex:1">
+              <label for="aw-badge">Badge</label>
+              <select id="aw-badge"></select>
+            </div>
+            <div class="field" style="margin-bottom:0;flex:1">
+              <label for="aw-user">Username</label>
+              <input type="text" id="aw-user" placeholder="who gets it?" required>
+            </div>
+            <button class="btn primary">Give badge</button>
+          </form>
+          <div id="holders-box" class="holders-box"></div>
         </div>
       </div>
     </div>

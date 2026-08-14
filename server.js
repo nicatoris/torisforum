@@ -86,8 +86,8 @@ function publicUser(u) {
     bio: u.bio,
     tagline: u.tagline,
     avatar: u.avatar,
+    banner: u.banner,
     accent: u.accent,
-    decor: u.decor,
     created_at: u.created_at,
   };
 }
@@ -99,7 +99,7 @@ const TREND_SCORE = `
   + 1.0
 `;
 const POST_SELECT = `
-  SELECT p.id, p.title, p.body, p.attachment, p.attachment_name, p.attachment_type, p.created_at,
+  SELECT p.id, p.title, p.body, p.attachment, p.attachment_name, p.attachment_type, p.created_at, p.pinned,
     b.slug AS board_slug, b.name AS board_name, b.accent AS board_accent,
     u.username, u.avatar, u.accent AS user_accent,
     (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS like_count,
@@ -123,6 +123,9 @@ function notify(userId, actorId, type, postId = null, badgeId = null) {
     'INSERT INTO notifications (user_id, actor_id, type, post_id, badge_id) VALUES (?, ?, ?, ?, ?)'
   ).run(userId, actorId, type, postId, badgeId);
 }
+
+// Badges with cond_type 'manual' are never auto-awarded; an admin assigns them.
+const MANUAL_COND = 'manual';
 
 const BADGE_CONDS = {
   posts: { label: 'Posts made', get: (id) => db.prepare('SELECT COUNT(*) AS n FROM posts WHERE user_id = ?').get(id).n },
@@ -331,6 +334,16 @@ app.post('/api/posts/:id/like', requireAuth, (req, res) => {
   res.json({ liked: !existing, like_count: count });
 });
 
+// pin/unpin your own post so it sits at the top of your profile
+app.post('/api/posts/:id/pin', requireAuth, (req, res) => {
+  const post = db.prepare('SELECT id, user_id, pinned FROM posts WHERE id = ?').get(req.params.id);
+  if (!post) return res.status(404).json({ error: 'post not found.' });
+  if (post.user_id !== req.user.id) return res.status(403).json({ error: 'you can only pin your own posts.' });
+  const next = post.pinned ? 0 : 1;
+  db.prepare('UPDATE posts SET pinned = ? WHERE id = ?').run(next, post.id);
+  res.json({ pinned: !!next });
+});
+
 app.post('/api/posts/:id/comments', requireAuth, (req, res) => {
   const post = db.prepare('SELECT id FROM posts WHERE id = ?').get(req.params.id);
   if (!post) return res.status(404).json({ error: 'post not found.' });
@@ -355,8 +368,11 @@ app.post('/api/posts/:id/comments', requireAuth, (req, res) => {
 app.get('/api/users/:username', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(req.params.username);
   if (!user) return res.status(404).json({ error: 'user not found.' });
+  const pinned = db
+    .prepare(`${POST_SELECT} WHERE p.user_id = ? AND p.pinned = 1 ORDER BY p.created_at DESC`)
+    .all(user.id);
   const posts = db
-    .prepare(`${POST_SELECT} WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 50`)
+    .prepare(`${POST_SELECT} WHERE p.user_id = ? AND p.pinned = 0 ORDER BY p.created_at DESC LIMIT 50`)
     .all(user.id);
   checkBadges(user.id); // keep time-based badges current
   const stats = {
@@ -374,6 +390,7 @@ app.get('/api/users/:username', (req, res) => {
   res.json({
     user: publicUser(user),
     posts: attachLiked(posts, req.user),
+    pinned: attachLiked(pinned, req.user),
     stats,
     badges: userBadges(user.id),
     is_following,
@@ -454,9 +471,10 @@ app.post('/api/badges', requireAdmin, (req, res) => {
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 40) {
     return res.status(400).json({ error: 'badge name required (max 40 chars).' });
   }
-  if (!BADGE_CONDS[cond_type]) return res.status(400).json({ error: 'pick a valid condition.' });
-  const t = parseInt(threshold, 10);
-  if (!Number.isInteger(t) || t < 1 || t > 1000000) {
+  const manual = cond_type === MANUAL_COND;
+  if (!manual && !BADGE_CONDS[cond_type]) return res.status(400).json({ error: 'pick a valid condition.' });
+  const t = manual ? 0 : parseInt(threshold, 10);
+  if (!manual && (!Number.isInteger(t) || t < 1 || t > 1000000)) {
     return res.status(400).json({ error: 'threshold must be a whole number of at least 1.' });
   }
   if (db.prepare('SELECT id FROM badges WHERE name = ?').get(name.trim())) {
@@ -479,22 +497,86 @@ app.delete('/api/badges/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-const DECORS = ['grid', 'stars', 'waves', 'circuit', 'static', 'none'];
+// who holds a badge (admin view)
+app.get('/api/badges/:id/holders', requireAdmin, (req, res) => {
+  const holders = db
+    .prepare(
+      `SELECT u.username FROM user_badges ub JOIN users u ON u.id = ub.user_id
+       WHERE ub.badge_id = ? ORDER BY ub.created_at DESC`
+    )
+    .all(req.params.id);
+  res.json({ holders: holders.map((h) => h.username) });
+});
 
-app.post('/api/profile', requireAuth, upload.single('avatar'), (req, res) => {
-  const { bio, tagline, accent, decor } = req.body || {};
-  const updates = { bio: undefined, tagline: undefined, accent: undefined, decor: undefined, avatar: undefined };
+// hand a badge to a member by name
+app.post('/api/badges/:id/award', requireAdmin, (req, res) => {
+  const badge = db.prepare('SELECT id FROM badges WHERE id = ?').get(req.params.id);
+  if (!badge) return res.status(404).json({ error: 'badge not found.' });
+  const user = db.prepare('SELECT id FROM users WHERE username = ?').get(String((req.body || {}).username || ''));
+  if (!user) return res.status(404).json({ error: 'no member with that username.' });
+  const done = db
+    .prepare('INSERT OR IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)')
+    .run(user.id, badge.id);
+  if (!done.changes) return res.status(409).json({ error: 'they already have that badge.' });
+  notify(user.id, null, 'badge', null, badge.id);
+  res.json({ ok: true });
+});
+
+// take a badge back
+app.delete('/api/badges/:id/award', requireAdmin, (req, res) => {
+  const user = db.prepare('SELECT id FROM users WHERE username = ?').get(String(req.query.username || ''));
+  if (!user) return res.status(404).json({ error: 'no member with that username.' });
+  db.prepare('DELETE FROM user_badges WHERE user_id = ? AND badge_id = ?').run(user.id, req.params.id);
+  db.prepare('DELETE FROM notifications WHERE user_id = ? AND badge_id = ?').run(user.id, req.params.id);
+  res.json({ ok: true });
+});
+
+// ---- site settings ----
+app.get('/api/settings', (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM site_settings').all();
+  res.json({ settings: Object.fromEntries(rows.map((r) => [r.key, r.value])) });
+});
+
+const EDITABLE_SETTINGS = { home_text: 400 };
+
+app.post('/api/settings', requireAdmin, (req, res) => {
+  const put = db.prepare(
+    'INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  );
+  for (const [key, maxLen] of Object.entries(EDITABLE_SETTINGS)) {
+    const value = (req.body || {})[key];
+    if (typeof value === 'string') put.run(key, value.slice(0, maxLen));
+  }
+  const rows = db.prepare('SELECT key, value FROM site_settings').all();
+  res.json({ settings: Object.fromEntries(rows.map((r) => [r.key, r.value])) });
+});
+
+app.post(
+  '/api/profile',
+  requireAuth,
+  upload.fields([
+    { name: 'avatar', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
+  ]),
+  (req, res) => {
+  const { bio, tagline, accent } = req.body || {};
+  const updates = { bio: undefined, tagline: undefined, accent: undefined, avatar: undefined, banner: undefined };
   if (typeof bio === 'string') updates.bio = bio.slice(0, 500);
   if (typeof tagline === 'string') updates.tagline = tagline.slice(0, 60);
   if (typeof accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(accent)) updates.accent = accent;
-  if (typeof decor === 'string' && DECORS.includes(decor)) updates.decor = decor;
-  if (req.file) {
-    if (!req.file.mimetype.startsWith('image/')) {
-      fs.unlink(req.file.path, () => {});
-      return res.status(400).json({ error: 'avatar must be an image.' });
+
+  const avatarFile = req.files?.avatar?.[0];
+  const bannerFile = req.files?.banner?.[0];
+  for (const [field, file] of [['avatar', avatarFile], ['banner', bannerFile]]) {
+    if (!file) continue;
+    if (!file.mimetype.startsWith('image/')) {
+      for (const f of [avatarFile, bannerFile]) if (f) fs.unlink(f.path, () => {});
+      return res.status(400).json({ error: `${field} must be an image (PNG, JPEG, GIF or WebP).` });
     }
-    updates.avatar = '/uploads/' + req.file.filename;
+    updates[field] = '/uploads/' + file.filename;
   }
+  // "remove" clears an existing image
+  if (req.body.banner === 'remove') updates.banner = null;
   const sets = [];
   const vals = [];
   for (const [k, v] of Object.entries(updates)) {
@@ -507,8 +589,9 @@ app.post('/api/profile', requireAuth, upload.single('avatar'), (req, res) => {
     vals.push(req.user.id);
     db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
   }
-  res.json({ user: publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id)) });
-});
+    res.json({ user: publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id)) });
+  }
+);
 
 // ---- html routes (clean urls) ----
 const pages = {

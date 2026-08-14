@@ -20,13 +20,21 @@
             <label>Avatar</label>
             <div class="avatar-edit-row">
               <div id="current-avatar"></div>
-              <label class="file-label" style="flex:1"><input type="file" id="avatar" accept="image/*"><span id="avatar-name">Upload a new avatar (image, 8MB max)</span></label>
+              <label class="file-label" style="flex:1"><input type="file" id="avatar" accept="image/*"><span id="avatar-name">Choose an image or GIF — you can crop it next</span></label>
             </div>
           </div>
           <div class="field">
-            <label for="tagline">Tagline</label>
+            <label>Profile banner</label>
+            <div id="current-banner" class="banner-preview"></div>
+            <div class="banner-edit-row">
+              <label class="file-label" style="flex:1"><input type="file" id="banner" accept="image/*"><span id="banner-name">Choose a banner image or GIF — you can crop it next</span></label>
+              <button type="button" class="btn ghost" id="banner-clear">Remove</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="tagline">Nickname</label>
             <input type="text" id="tagline" maxlength="60" placeholder="e.g. night shift operator">
-            <div class="hint">A short label shown next to your name</div>
+            <div class="hint">Shown next to your username on your profile</div>
           </div>
           <div class="field">
             <label for="bio">Bio</label>
@@ -35,17 +43,14 @@
           <div class="field">
             <label>Accent color</label>
             <div class="color-pick" id="color-pick"></div>
-          </div>
-          <div class="field">
-            <label>Profile decor</label>
-            <div class="decor-pick" id="decor-pick"></div>
-            <div class="hint">The banner pattern on your profile page</div>
+            <div class="hint">Outlines your profile picture on your profile page</div>
           </div>
           <button class="btn primary" style="width:100%;justify-content:center">Save changes</button>
         </form>
       </div>
     </div>
   </main>
+  <script src="/js/crop.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

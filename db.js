@@ -102,12 +102,38 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followee_id);
 `);
+
+// ---- migrations for databases created by earlier versions ----
+function addColumn(table, column, definition) {
+  const exists = db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all()
+    .some((c) => c.name === column);
+  if (!exists) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`[db] added ${table}.${column}`);
+  }
+}
+addColumn('users', 'banner', 'TEXT');
+addColumn('posts', 'pinned', 'INTEGER NOT NULL DEFAULT 0');
+
+// ---- default site settings ----
+const DEFAULT_SETTINGS = {
+  home_text: "Boards for whatever you're into. Post, share files, and see what's trending right now.",
+};
+const putSetting = db.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)');
+for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) putSetting.run(k, v);
 
 // ---- seed admin + starter boards ----
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'nicatoris';

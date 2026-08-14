@@ -330,6 +330,7 @@ h2 .sig { color: var(--accent); }
   position: relative;
 }
 .post-card:hover { border-color: var(--line2); background: var(--card2); }
+#profile-pinned .post-card { border-left: 3px solid var(--accent); }
 .post-card + .post-card { margin-top: 3px; }
 .post-card .vote {
   display: flex;
@@ -426,6 +427,8 @@ h2 .sig { color: var(--accent); }
   flex-shrink: 0;
 }
 .avatar.lg { width: 72px; height: 72px; border: 1px solid var(--line2); outline: 3px solid var(--shell-bg); }
+/* accent ring: only on the profile page's own picture */
+.avatar.accent-ring { border: 3px solid var(--p-accent, var(--accent2)); outline: 2px solid var(--card); }
 .avatar.md { width: 30px; height: 30px; }
 .avatar-fallback {
   display: inline-flex;
@@ -627,16 +630,19 @@ textarea { resize: vertical; min-height: 100px; }
 /* ── profile ── */
 .profile-head { border: 1px solid var(--line2); background: var(--card); }
 .profile-banner {
-  height: 92px;
+  height: 132px;
   border-bottom: 1px solid var(--line2);
   position: relative;
+  overflow: hidden;
   background-color: color-mix(in srgb, var(--p-accent, var(--accent2)) 12%, var(--card2));
 }
+.profile-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .profile-banner::after {
   content: '';
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, 0.045) 3px 4px);
+  pointer-events: none;
 }
 .profile-info { padding: 0 16px 14px; margin-top: -30px; position: relative; z-index: 2; }
 .profile-info .row { display: flex; align-items: flex-end; gap: 13px; flex-wrap: wrap; }
@@ -730,62 +736,102 @@ textarea { resize: vertical; min-height: 100px; }
   margin-left: 2px;
 }
 
-/* profile decor patterns */
-.decor-grid {
-  background-image:
-    linear-gradient(var(--p-glow) 1px, transparent 1px),
-    linear-gradient(90deg, var(--p-glow) 1px, transparent 1px);
-  background-size: 18px 18px;
+/* ── image cropper ── */
+.crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(6, 10, 18, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
 }
-.decor-stars {
-  background-image:
-    radial-gradient(1.5px 1.5px at 20% 30%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(1px 1px at 40% 70%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(2px 2px at 60% 20%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(1px 1px at 80% 55%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(1.5px 1.5px at 90% 25%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(1px 1px at 10% 80%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(1.5px 1.5px at 50% 45%, var(--p-accent) 50%, transparent 51%),
-    radial-gradient(1px 1px at 70% 85%, var(--p-accent) 50%, transparent 51%);
-}
-.decor-waves {
-  background-image: repeating-radial-gradient(circle at 50% 150%, transparent 0 16px, var(--p-glow) 17px, transparent 18px);
-}
-.decor-circuit {
-  background-image:
-    linear-gradient(var(--p-glow) 1px, transparent 1px),
-    linear-gradient(90deg, var(--p-glow) 1px, transparent 1px),
-    radial-gradient(circle 2px at 30% 40%, var(--p-accent) 99%, transparent),
-    radial-gradient(circle 2px at 62% 72%, var(--p-accent) 99%, transparent),
-    radial-gradient(circle 2px at 84% 28%, var(--p-accent) 99%, transparent);
-  background-size: 36px 36px, 36px 36px, 100% 100%, 100% 100%, 100% 100%;
-}
-.decor-static {
-  background-image: repeating-linear-gradient(0deg, var(--p-glow) 0 1px, transparent 1px 3px);
-}
-.decor-none { background-image: none; }
-
-/* decor picker swatches */
-.decor-pick { display: flex; gap: 6px; flex-wrap: wrap; }
-.decor-pick .swatch {
-  width: 70px;
-  height: 44px;
-  border: 1px solid var(--line2);
-  cursor: pointer;
-  position: relative;
-  background-color: color-mix(in srgb, var(--p-accent, var(--accent2)) 10%, var(--card2));
-}
-.decor-pick .swatch.sel { border-color: var(--accent); outline: 1px solid var(--accent); }
-.decor-pick .swatch span {
-  position: absolute;
-  bottom: 2px;
-  left: 4px;
-  font-size: 9px;
-  font-weight: bold;
-  color: var(--dim);
+.crop-box {
   background: var(--card);
+  border: 1px solid var(--line2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  padding: 14px;
+  max-width: 360px;
+  width: 100%;
+}
+.crop-head { font-weight: bold; font-size: 12px; margin-bottom: 10px; }
+.crop-stage-wrap { display: flex; justify-content: center; background: var(--field-bg); border: 1px solid var(--line); padding: 8px; }
+.crop-stage { touch-action: none; cursor: grab; display: block; background: var(--card2); }
+.crop-stage:active { cursor: grabbing; }
+.crop-stage.is-round { border-radius: 50%; }
+.crop-controls { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.crop-controls label { font-size: 10px; font-weight: bold; color: var(--dim); }
+.crop-zoom { flex: 1; accent-color: var(--accent2); }
+.crop-hint { font-size: 10px; color: var(--dimmer); margin-top: 5px; }
+.crop-gif-note {
+  font-size: 10px;
+  color: var(--text);
+  background: var(--card2);
+  border: 1px solid var(--line);
+  padding: 7px 9px;
+  margin-top: 8px;
+}
+.crop-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+
+/* ── banner in settings ── */
+.banner-preview {
+  height: 84px;
+  border: 1px solid var(--line2);
+  background: var(--card2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.banner-preview img { width: 100%; height: 100%; object-fit: cover; }
+.banner-empty { font-size: 10px; color: var(--dimmer); }
+.banner-edit-row { display: flex; gap: 6px; align-items: stretch; }
+.banner-edit-row .btn { white-space: nowrap; }
+
+/* ── pin control on your own profile ── */
+.pin-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font: bold 9px var(--font);
+  color: var(--dim);
+  background: linear-gradient(180deg, var(--btn-hi), var(--btn-lo));
+  border: 1px solid var(--btn-border);
+  border-top-color: var(--line-in);
+  border-left-color: var(--line-in);
+  padding: 3px 8px 2px;
+  cursor: pointer;
+}
+.pin-btn:hover { color: var(--accent); }
+.pin-btn.on { color: var(--accent); border-color: var(--accent); }
+.pin-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── admin: give a badge ── */
+.award-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.holders-box { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.holders-label { font-size: 10px; color: var(--dimmer); width: 100%; }
+.holder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line2);
+  background: var(--card2);
+  padding: 2px 4px 2px 8px;
+  font-size: 10px;
+}
+.holder-chip button {
+  border: 0;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
   padding: 0 3px;
 }
+.holder-chip button:hover { color: #c0392b; }
+
 .color-pick { display: flex; gap: 6px; flex-wrap: wrap; }
 .color-pick .cswatch {
   width: 24px; height: 24px;
@@ -915,7 +961,8 @@ label.file-label:hover { border-color: var(--accent2); color: var(--accent2); }
   .theme-btn { font-size: 12px; }
   .md-toolbar button { font-size: 12px; padding: 8px 12px 7px; min-width: 34px; }
   .color-pick .cswatch { width: 32px; height: 32px; }
-  .decor-pick .swatch { width: 84px; height: 54px; }
+  .banner-preview { height: 96px; }
+  .award-form { flex-direction: column; align-items: stretch; }
 
   /* forms: 16px inputs stop iOS zoom-on-focus */
   input[type='text'], input[type='password'], input[type='number'], textarea, select {

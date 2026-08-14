@@ -237,7 +237,14 @@ function showErr(el, msg) {
 const PAGES = {
   /* ── home ── */
   async home() {
-    const [{ newest, trending }, { boards }] = await Promise.all([api('/api/home'), api('/api/boards')]);
+    const [{ newest, trending }, { boards }, settings] = await Promise.all([
+      api('/api/home'),
+      api('/api/boards'),
+      api('/api/settings').catch(() => ({ settings: {} })),
+    ]);
+
+    const homeText = settings.settings?.home_text;
+    if (homeText != null) $('#home-text').textContent = homeText;
 
     $('#hero-cta').innerHTML = ME
       ? `<a class="btn primary" href="/new">New post</a>`
@@ -554,7 +561,7 @@ const PAGES = {
       $('#profile-root').innerHTML = `<div class="empty" style="margin-top:40px">${esc(e.message)}</div>`;
       return;
     }
-    const { user, posts, stats, badges, is_following } = data;
+    const { user, posts, pinned, stats, badges, is_following } = data;
     document.title = `@${user.username} · vipnet`;
     const accent = user.accent || '#2f6bff';
 
@@ -583,14 +590,18 @@ const PAGES = {
           .join('')}</div>`
       : '';
 
+    const bannerHtml = user.banner
+      ? `<div class="profile-banner has-image"><img src="${esc(user.banner)}" alt=""></div>`
+      : '<div class="profile-banner"></div>';
+
     $('#profile-root').innerHTML = `
       <div class="profile-head" style="--p-accent:${esc(accent)};--p-glow:color-mix(in srgb, ${esc(
       accent
     )} 14%, transparent)">
-        <div class="profile-banner decor-${esc(user.decor || 'grid')}"></div>
+        ${bannerHtml}
         <div class="profile-info">
           <div class="row">
-            ${avatarHtml(user, 'lg')}
+            ${avatarHtml(user, 'lg accent-ring')}
             <div style="padding-bottom:6px">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <span class="profile-name" style="font-family:var(--font-head)">${esc(user.username)}</span>
@@ -616,13 +627,50 @@ const PAGES = {
           </div>
         </div>
       </div>
+      ${
+        pinned.length
+          ? `<div class="sec-head"><h2>Pinned</h2><span class="tag">${pinned.length} post${
+              pinned.length === 1 ? '' : 's'
+            }</span><div class="rule"></div></div>
+             <div id="profile-pinned"></div>`
+          : ''
+      }
       <div class="sec-head"><h2>Posts by ${esc(user.username)}</h2><span class="tag">${stats.posts} total</span><div class="rule"></div></div>
       <div id="profile-posts"></div>`;
 
+    // Only you can pin your own posts, so the control shows on your profile.
+    const withPin = (p) => {
+      const html = postCardHtml(p);
+      if (!isMe) return html;
+      return html.replace(
+        '</article>',
+        `<button class="pin-btn ${p.pinned ? 'on' : ''}" data-pin="${p.id}" title="${
+          p.pinned ? 'Unpin from top' : 'Pin to top'
+        }">${p.pinned ? 'Unpin' : 'Pin'}</button></article>`
+      );
+    };
+
+    if (pinned.length) {
+      $('#profile-pinned').innerHTML = pinned.map(withPin).join('');
+    }
     $('#profile-posts').innerHTML = posts.length
-      ? posts.map((p) => postCardHtml(p)).join('')
+      ? posts.map(withPin).join('')
       : '<div class="empty">No posts yet</div>';
     bindLikeButtons();
+
+    $$('[data-pin]').forEach((btn) =>
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        try {
+          await api(`/api/posts/${btn.dataset.pin}/pin`, { method: 'POST' });
+          await PAGES.profile(); // re-render so the post moves section
+        } catch (ex) {
+          alert(ex.message);
+          btn.disabled = false;
+        }
+      })
+    );
 
     $('#logout-btn')?.addEventListener('click', async () => {
       try {
@@ -714,13 +762,29 @@ const PAGES = {
   async settings() {
     if (!ME) return (location.href = '/login');
     const COLORS = ['#2f6bff', '#7c5cff', '#ef5da8', '#f59e0b', '#10b981', '#0ea5e9', '#64748b', '#1f2937'];
-    const DECORS = ['grid', 'stars', 'waves', 'circuit', 'static', 'none'];
     let accent = ME.accent;
-    let decor = ME.decor;
+    // Blobs produced by the cropper, sent on save.
+    let avatarPick = null;
+    let bannerPick = null;
+    let removeBanner = false;
 
     $('#bio').value = ME.bio || '';
     $('#tagline').value = ME.tagline || '';
-    $('#current-avatar').innerHTML = avatarHtml(ME, 'lg');
+
+    const paintAvatar = (src) => {
+      $('#current-avatar').innerHTML = src
+        ? `<img class="avatar lg" style="border-color:${esc(accent)}" src="${esc(src)}">`
+        : avatarHtml(ME, 'lg');
+      const el = $('#current-avatar .avatar');
+      if (el) el.style.borderColor = accent;
+    };
+    const paintBanner = (src) => {
+      $('#current-banner').innerHTML = src
+        ? `<img src="${esc(src)}" alt="">`
+        : '<span class="banner-empty">No banner yet</span>';
+    };
+    paintAvatar(ME.avatar);
+    paintBanner(ME.banner);
 
     $('#color-pick').innerHTML = COLORS.map(
       (c) =>
@@ -730,32 +794,44 @@ const PAGES = {
       s.addEventListener('click', () => {
         accent = s.dataset.c;
         $$('#color-pick .cswatch').forEach((x) => x.classList.toggle('sel', x === s));
-        renderDecors();
+        const el = $('#current-avatar .avatar');
+        if (el) el.style.borderColor = accent;
       })
     );
 
-    function renderDecors() {
-      $('#decor-pick').innerHTML = DECORS.map(
-        (d) =>
-          `<div class="swatch decor-${d} ${d === decor ? 'sel' : ''}" data-d="${d}"
-            style="--p-accent:${accent};--p-glow:color-mix(in srgb, ${accent} 20%, transparent)"><span>${d}</span></div>`
-      ).join('');
-      $$('#decor-pick .swatch').forEach((s) =>
-        s.addEventListener('click', () => {
-          decor = s.dataset.d;
-          $$('#decor-pick .swatch').forEach((x) => x.classList.toggle('sel', x === s));
-        })
-      );
+    // ── pick + crop ──
+    async function pickImage(input, { aspect, round, outWidth }, onDone) {
+      const file = input.files[0];
+      input.value = ''; // allow re-picking the same file
+      if (!file) return;
+      if (!file.type.startsWith('image/')) return alert('Please choose an image file.');
+      if (file.size > 8 * 1024 * 1024) return alert('That file is larger than 8MB.');
+      const result = await openCropper(file, { aspect, round, outWidth });
+      if (result) onDone(result);
     }
-    renderDecors();
 
-    const avatarInput = $('#avatar');
-    avatarInput.addEventListener('change', () => {
-      if (avatarInput.files[0]) {
-        $('#avatar-name').textContent = `⎙ ${avatarInput.files[0].name}`;
-        const url = URL.createObjectURL(avatarInput.files[0]);
-        $('#current-avatar').innerHTML = `<img class="avatar lg" src="${url}">`;
-      }
+    $('#avatar').addEventListener('change', (e) =>
+      pickImage(e.target, { aspect: 1, round: true, outWidth: 512 }, (r) => {
+        avatarPick = r;
+        $('#avatar-name').textContent = r.name === 'crop.png' ? 'Cropped image ready' : `${r.name} (animated)`;
+        paintAvatar(URL.createObjectURL(r.blob));
+      })
+    );
+
+    $('#banner').addEventListener('change', (e) =>
+      pickImage(e.target, { aspect: 3, round: false, outWidth: 1200 }, (r) => {
+        bannerPick = r;
+        removeBanner = false;
+        $('#banner-name').textContent = r.name === 'crop.png' ? 'Cropped banner ready' : `${r.name} (animated)`;
+        paintBanner(URL.createObjectURL(r.blob));
+      })
+    );
+
+    $('#banner-clear').addEventListener('click', () => {
+      bannerPick = null;
+      removeBanner = true;
+      $('#banner-name').textContent = 'Choose a banner image or GIF — you can crop it next';
+      paintBanner(null);
     });
 
     $('#settings-form').addEventListener('submit', async (e) => {
@@ -769,10 +845,16 @@ const PAGES = {
         fd.append('bio', $('#bio').value);
         fd.append('tagline', $('#tagline').value);
         fd.append('accent', accent);
-        fd.append('decor', decor);
-        if (avatarInput.files[0]) fd.append('avatar', avatarInput.files[0]);
+        if (avatarPick) fd.append('avatar', avatarPick.blob, avatarPick.name);
+        if (bannerPick) fd.append('banner', bannerPick.blob, bannerPick.name);
+        else if (removeBanner) fd.append('banner', 'remove');
         const { user } = await api('/api/profile', { method: 'POST', body: fd });
         ME = user;
+        avatarPick = null;
+        bannerPick = null;
+        removeBanner = false;
+        paintAvatar(user.avatar);
+        paintBanner(user.banner);
         ok.textContent = 'Saved — looking good.';
         ok.classList.add('show');
       } catch (ex) {
@@ -858,13 +940,43 @@ const PAGES = {
       })
     );
 
+    // ── homepage text ──
+    try {
+      const { settings } = await api('/api/settings');
+      $('#home-text-input').value = settings.home_text || '';
+    } catch {}
+    $('#home-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#home-err');
+      const ok = $('#home-ok');
+      err.classList.remove('show');
+      ok.classList.remove('show');
+      try {
+        await api('/api/settings', {
+          method: 'POST',
+          body: JSON.stringify({ home_text: $('#home-text-input').value }),
+        });
+        ok.textContent = 'Homepage text saved.';
+        ok.classList.add('show');
+      } catch (ex) {
+        showErr(err, ex.message);
+      }
+    });
+
+    const MANUAL = 'manual';
     let condTypes = {};
     async function loadBadges() {
       const { badges, cond_types } = await api('/api/badges');
       condTypes = cond_types;
-      $('#bd-cond').innerHTML = Object.entries(cond_types)
-        .map(([k, label]) => `<option value="${k}">${esc(label)}</option>`)
-        .join('');
+      $('#bd-cond').innerHTML =
+        `<option value="${MANUAL}">No condition — you assign it</option>` +
+        Object.entries(cond_types)
+          .map(([k, label]) => `<option value="${k}">${esc(label)}</option>`)
+          .join('');
+      $('#aw-badge').innerHTML = badges.length
+        ? badges.map((b) => `<option value="${b.id}">${esc(b.icon)} ${esc(b.name)}</option>`).join('')
+        : '<option value="">No badges yet</option>';
+      syncCondUI();
       $('#badge-rows').innerHTML = badges.length
         ? badges
             .map(
@@ -873,7 +985,11 @@ const PAGES = {
             <td><span class="badge-chip" style="--b-color:${esc(b.color)}" title="${esc(b.description)}"><i>${esc(
                 b.icon
               )}</i>${esc(b.name)}</span></td>
-            <td style="color:var(--dim)">${esc(condTypes[b.cond_type] || b.cond_type)} ≥ ${b.threshold}</td>
+            <td style="color:var(--dim)">${
+              b.cond_type === MANUAL
+                ? 'Assigned by you'
+                : `${esc(condTypes[b.cond_type] || b.cond_type)} ≥ ${b.threshold}`
+            }</td>
             <td>${b.holder_count}</td>
             <td><button class="btn ghost danger" data-del-badge="${b.id}" style="padding:2px 8px">×</button></td>
           </tr>`
@@ -910,6 +1026,69 @@ const PAGES = {
         $('#bd-icon').value = '';
         $('#bd-desc').value = '';
         $('#bd-threshold').value = '1';
+        await loadBadges();
+      } catch (ex) {
+        showErr(err, ex.message);
+      }
+    });
+
+    // manual badges have no threshold, so hide that control
+    function syncCondUI() {
+      const manual = $('#bd-cond').value === MANUAL;
+      $('#bd-threshold').style.display = manual ? 'none' : '';
+      $('#bd-cond-hint').textContent = manual
+        ? 'Nobody gets this automatically — hand it out below.'
+        : 'The badge is granted once the number is reached — checked automatically, and existing members who already qualify get it right away.';
+    }
+    $('#bd-cond').addEventListener('change', syncCondUI);
+
+    // ── give a badge to someone ──
+    async function loadHolders() {
+      const id = $('#aw-badge').value;
+      if (!id) return ($('#holders-box').innerHTML = '');
+      try {
+        const { holders } = await api(`/api/badges/${id}/holders`);
+        $('#holders-box').innerHTML = holders.length
+          ? `<div class="holders-label">Currently held by</div>` +
+            holders
+              .map(
+                (u) =>
+                  `<span class="holder-chip"><a href="/user?u=${esc(u)}">${esc(
+                    u
+                  )}</a><button type="button" data-revoke="${esc(u)}" title="Take it back">×</button></span>`
+              )
+              .join('')
+          : '<div class="holders-label">Nobody has this badge yet.</div>';
+        $$('[data-revoke]').forEach((btn) =>
+          btn.addEventListener('click', async () => {
+            if (!confirm(`Take this badge away from ${btn.dataset.revoke}?`)) return;
+            await api(`/api/badges/${id}/award?username=${encodeURIComponent(btn.dataset.revoke)}`, {
+              method: 'DELETE',
+            });
+            await loadHolders();
+            await loadBadges();
+          })
+        );
+      } catch {}
+    }
+    $('#aw-badge').addEventListener('change', loadHolders);
+    await loadHolders();
+
+    $('#award-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#award-err');
+      const ok = $('#award-ok');
+      err.classList.remove('show');
+      ok.classList.remove('show');
+      try {
+        await api(`/api/badges/${$('#aw-badge').value}/award`, {
+          method: 'POST',
+          body: JSON.stringify({ username: $('#aw-user').value.trim() }),
+        });
+        ok.textContent = `Badge given to ${$('#aw-user').value.trim()}.`;
+        ok.classList.add('show');
+        $('#aw-user').value = '';
+        await loadHolders();
         await loadBadges();
       } catch (ex) {
         showErr(err, ex.message);
