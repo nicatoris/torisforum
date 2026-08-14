@@ -536,5 +536,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`TORISFORUM online → http://localhost:${PORT}`);
+  console.log(`VIPNET online → http://localhost:${PORT}`);
 });

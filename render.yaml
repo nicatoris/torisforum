@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: torisforum
+    name: vipnet
     runtime: node
     plan: starter
     buildCommand: npm install
@@ -13,6 +13,6 @@ services:
       - key: UPLOAD_DIR
         value: /var/data/uploads
     disk:
-      name: torisforum-data
+      name: vipnet-data
       mountPath: /var/data
       sizeGB: 1

@@ -120,7 +120,7 @@ if (!adminExists) {
   ).run(
     ADMIN_USERNAME,
     bcrypt.hashSync(ADMIN_PASSWORD, 10),
-    'Admin of torisforum.',
+    'Admin of vipnet.',
     'administrator',
     '#7c5cff',
     'stars'

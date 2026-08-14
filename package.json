@@ -1,7 +1,7 @@
 {
-  "name": "torisforum",
+  "name": "vipnet",
   "version": "1.0.0",
-  "description": "TORISFORUM — a cyber/y2k social forum",
+  "description": "VIPNET — a cyber/y2k social forum",
   "main": "server.js",
   "engines": {
     "node": ">=18"

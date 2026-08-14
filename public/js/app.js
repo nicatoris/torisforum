@@ -1,4 +1,4 @@
-/* TORISFORUM · shared client */
+/* VIPNET · shared client */
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -82,7 +82,7 @@ async function initNav() {
   });
   bar.innerHTML = `
     <div class="mast-top">
-      <a class="logo" href="/">toris<em>forum</em></a>
+      <a class="logo" href="/">vip<em>net</em></a>
       <span class="mast-stamp">${stamp}</span>
     </div>
     <nav class="navstrip" id="nav-boards">
@@ -128,7 +128,7 @@ async function initNav() {
 
   const foot = document.createElement('footer');
   foot.className = 'footer';
-  foot.innerHTML = `&copy; 2026 <b>torisforum</b> &middot; all rights reserved`;
+  foot.innerHTML = `&copy; 2026 <b>vipnet</b> &middot; all rights reserved`;
   shell.appendChild(foot);
 }
 
@@ -272,7 +272,7 @@ const PAGES = {
 
     async function load() {
       const { board, posts } = await api(`/api/boards/${encodeURIComponent(slug)}/posts?sort=${sort}`);
-      document.title = `/${board.slug} · TORISFORUM`;
+      document.title = `/${board.slug} · VIPNET`;
       $('#board-head').innerHTML = `
         <div class="hero">
           <h1 style="font-size:18px"><span style="color:${esc(board.accent)}">/</span>${esc(board.name)}</h1>
@@ -402,7 +402,7 @@ const PAGES = {
       return;
     }
     const { post, comments } = data;
-    document.title = `${post.title} · TORISFORUM`;
+    document.title = `${post.title} · VIPNET`;
 
     let attach = '';
     if (post.attachment) {
@@ -515,7 +515,7 @@ const PAGES = {
       return;
     }
     const { user, posts, stats, badges, is_following } = data;
-    document.title = `@${user.username} · torisforum`;
+    document.title = `@${user.username} · vipnet`;
     const accent = user.accent || '#2f6bff';
 
     const isMe = ME && ME.username === user.username;

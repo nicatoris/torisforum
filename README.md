@@ -1,4 +1,4 @@
-# torisforum ✦
+# vipnet ✦
 
 A sleek social forum with y2k undertones. Boards, posts with attachments,
 likes, comments, a trending feed, and customizable profiles — all saved to
@@ -56,7 +56,7 @@ mounted at `/var/data`, then set the environment variables
   The database lives in `data/forum.db`, uploaded files in `uploads/`.
 - **Auth:** username + password accounts (bcrypt-hashed), httpOnly session
   cookies that survive server restarts.
-- **Admin:** the `nicatoris` account is seeded as SYSOP on first boot.
+- **Admin:** the `nicatoris` account is seeded as an admin on first boot.
   Admins get the `/admin` panel to create/delete boards (name, description,
   accent color) and can delete any post.
 - **Posts:** title + body + optional attachment (images/video/audio render
