@@ -68,6 +68,14 @@ mounted at `/var/data`, then set the environment variables
   newest posts + board directory.
 - **Profiles:** avatar upload, bio, tagline, accent color, and banner decor
   patterns (grid / stars / waves / circuit / static).
+- **Follows & notifications:** follow other members from their profile;
+  the Activity page has a Notifications tab (likes, comments, follows,
+  badge awards, with an unread counter in the nav) and a Following tab
+  showing the latest posts from people you follow.
+- **Badges:** admins define badges (name, icon, color, description) with
+  an auto-award condition — posts made, comments made, likes received,
+  followers, or days since joining. Badges are granted automatically,
+  retroactively for existing members, and shown on profiles.
 
 ## Pages
 

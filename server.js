@@ -116,6 +116,55 @@ function attachLiked(posts, user) {
   return posts.map((p) => ({ ...p, liked: !!likedStmt.get(p.id, user.id) }));
 }
 
+// ---- notifications + badges ----
+function notify(userId, actorId, type, postId = null, badgeId = null) {
+  if (actorId != null && actorId === userId) return;
+  db.prepare(
+    'INSERT INTO notifications (user_id, actor_id, type, post_id, badge_id) VALUES (?, ?, ?, ?, ?)'
+  ).run(userId, actorId, type, postId, badgeId);
+}
+
+const BADGE_CONDS = {
+  posts: { label: 'Posts made', get: (id) => db.prepare('SELECT COUNT(*) AS n FROM posts WHERE user_id = ?').get(id).n },
+  comments: { label: 'Comments made', get: (id) => db.prepare('SELECT COUNT(*) AS n FROM comments WHERE user_id = ?').get(id).n },
+  likes_received: {
+    label: 'Likes received',
+    get: (id) =>
+      db.prepare('SELECT COUNT(*) AS n FROM likes l JOIN posts p ON p.id = l.post_id WHERE p.user_id = ?').get(id).n,
+  },
+  followers: { label: 'Followers', get: (id) => db.prepare('SELECT COUNT(*) AS n FROM follows WHERE followee_id = ?').get(id).n },
+  account_age_days: {
+    label: 'Days since joining',
+    get: (id) => {
+      const u = db.prepare('SELECT created_at FROM users WHERE id = ?').get(id);
+      return u ? Math.floor((Date.now() / 1000 - u.created_at) / 86400) : 0;
+    },
+  },
+};
+
+// Award any badges the user now qualifies for; each award notifies them.
+function checkBadges(userId) {
+  const badges = db.prepare('SELECT * FROM badges').all();
+  const award = db.prepare('INSERT OR IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)');
+  for (const b of badges) {
+    const cond = BADGE_CONDS[b.cond_type];
+    if (!cond) continue;
+    if (cond.get(userId) >= b.threshold) {
+      if (award.run(userId, b.id).changes) notify(userId, null, 'badge', null, b.id);
+    }
+  }
+}
+
+function userBadges(userId) {
+  return db
+    .prepare(
+      `SELECT b.id, b.name, b.icon, b.color, b.description, ub.created_at AS earned_at
+       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+       WHERE ub.user_id = ? ORDER BY ub.created_at ASC`
+    )
+    .all(userId);
+}
+
 // ---- auth ----
 app.post('/api/register', (req, res) => {
   const { username, password } = req.body || {};
@@ -152,7 +201,13 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-  res.json({ user: publicUser(req.user) });
+  let unread = 0;
+  if (req.user) {
+    unread = db
+      .prepare('SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read = 0')
+      .get(req.user.id).n;
+  }
+  res.json({ user: publicUser(req.user), unread_notifications: unread });
 });
 
 // ---- boards ----
@@ -227,6 +282,7 @@ app.post('/api/posts', requireAuth, upload.single('attachment'), (req, res) => {
       'INSERT INTO posts (board_id, user_id, title, body, attachment, attachment_name, attachment_type) VALUES (?, ?, ?, ?, ?, ?, ?)'
     )
     .run(board.id, req.user.id, title.trim(), cleanBody, attachment, attachmentName, attachmentType);
+  checkBadges(req.user.id);
   res.json({ id: info.lastInsertRowid });
 });
 
@@ -259,10 +315,17 @@ app.post('/api/posts/:id/like', requireAuth, (req, res) => {
   const existing = db
     .prepare('SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?')
     .get(post.id, req.user.id);
+  const owner = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(post.id).user_id;
   if (existing) {
     db.prepare('DELETE FROM likes WHERE post_id = ? AND user_id = ?').run(post.id, req.user.id);
+    db.prepare("DELETE FROM notifications WHERE type = 'like' AND actor_id = ? AND post_id = ?").run(
+      req.user.id,
+      post.id
+    );
   } else {
     db.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)').run(post.id, req.user.id);
+    notify(owner, req.user.id, 'like', post.id);
+    checkBadges(owner);
   }
   const count = db.prepare('SELECT COUNT(*) AS n FROM likes WHERE post_id = ?').get(post.id).n;
   res.json({ liked: !existing, like_count: count });
@@ -276,6 +339,9 @@ app.post('/api/posts/:id/comments', requireAuth, (req, res) => {
   const info = db
     .prepare('INSERT INTO comments (post_id, user_id, body) VALUES (?, ?, ?)')
     .run(post.id, req.user.id, body);
+  const postOwner = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(post.id).user_id;
+  notify(postOwner, req.user.id, 'comment', post.id);
+  checkBadges(req.user.id);
   const comment = db
     .prepare(
       `SELECT c.id, c.body, c.created_at, u.username, u.avatar, u.accent AS user_accent
@@ -292,14 +358,125 @@ app.get('/api/users/:username', (req, res) => {
   const posts = db
     .prepare(`${POST_SELECT} WHERE p.user_id = ? ORDER BY p.created_at DESC LIMIT 50`)
     .all(user.id);
+  checkBadges(user.id); // keep time-based badges current
   const stats = {
     posts: db.prepare('SELECT COUNT(*) AS n FROM posts WHERE user_id = ?').get(user.id).n,
     comments: db.prepare('SELECT COUNT(*) AS n FROM comments WHERE user_id = ?').get(user.id).n,
     likes_received: db
       .prepare('SELECT COUNT(*) AS n FROM likes l JOIN posts p ON p.id = l.post_id WHERE p.user_id = ?')
       .get(user.id).n,
+    followers: db.prepare('SELECT COUNT(*) AS n FROM follows WHERE followee_id = ?').get(user.id).n,
+    following: db.prepare('SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?').get(user.id).n,
   };
-  res.json({ user: publicUser(user), posts: attachLiked(posts, req.user), stats });
+  const is_following = req.user
+    ? !!db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?').get(req.user.id, user.id)
+    : false;
+  res.json({
+    user: publicUser(user),
+    posts: attachLiked(posts, req.user),
+    stats,
+    badges: userBadges(user.id),
+    is_following,
+  });
+});
+
+// ---- follows ----
+app.post('/api/users/:username/follow', requireAuth, (req, res) => {
+  const target = db.prepare('SELECT id FROM users WHERE username = ?').get(req.params.username);
+  if (!target) return res.status(404).json({ error: 'user not found.' });
+  if (target.id === req.user.id) return res.status(400).json({ error: "you can't follow yourself." });
+  const existing = db
+    .prepare('SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?')
+    .get(req.user.id, target.id);
+  if (existing) {
+    db.prepare('DELETE FROM follows WHERE follower_id = ? AND followee_id = ?').run(req.user.id, target.id);
+    db.prepare("DELETE FROM notifications WHERE type = 'follow' AND actor_id = ? AND user_id = ?").run(
+      req.user.id,
+      target.id
+    );
+  } else {
+    db.prepare('INSERT INTO follows (follower_id, followee_id) VALUES (?, ?)').run(req.user.id, target.id);
+    notify(target.id, req.user.id, 'follow');
+    checkBadges(target.id);
+  }
+  const followers = db.prepare('SELECT COUNT(*) AS n FROM follows WHERE followee_id = ?').get(target.id).n;
+  res.json({ following: !existing, followers });
+});
+
+// posts from people the user follows
+app.get('/api/feed', requireAuth, (req, res) => {
+  const posts = db
+    .prepare(
+      `${POST_SELECT} WHERE p.user_id IN (SELECT followee_id FROM follows WHERE follower_id = ?)
+       ORDER BY p.created_at DESC LIMIT 50`
+    )
+    .all(req.user.id);
+  res.json({ posts: attachLiked(posts, req.user) });
+});
+
+// ---- notifications ----
+app.get('/api/notifications', requireAuth, (req, res) => {
+  const items = db
+    .prepare(
+      `SELECT n.id, n.type, n.read, n.created_at,
+        a.username AS actor_username, a.avatar AS actor_avatar, a.accent AS actor_accent,
+        p.id AS post_id, p.title AS post_title,
+        b.name AS badge_name, b.icon AS badge_icon, b.color AS badge_color
+       FROM notifications n
+       LEFT JOIN users a ON a.id = n.actor_id
+       LEFT JOIN posts p ON p.id = n.post_id
+       LEFT JOIN badges b ON b.id = n.badge_id
+       WHERE n.user_id = ?
+       ORDER BY n.created_at DESC LIMIT 50`
+    )
+    .all(req.user.id);
+  res.json({ notifications: items });
+});
+
+app.post('/api/notifications/read', requireAuth, (req, res) => {
+  db.prepare('UPDATE notifications SET read = 1 WHERE user_id = ?').run(req.user.id);
+  res.json({ ok: true });
+});
+
+// ---- badges ----
+app.get('/api/badges', (req, res) => {
+  const badges = db
+    .prepare(
+      `SELECT b.*, (SELECT COUNT(*) FROM user_badges ub WHERE ub.badge_id = b.id) AS holder_count
+       FROM badges b ORDER BY b.created_at ASC`
+    )
+    .all();
+  res.json({ badges, cond_types: Object.fromEntries(Object.entries(BADGE_CONDS).map(([k, v]) => [k, v.label])) });
+});
+
+app.post('/api/badges', requireAdmin, (req, res) => {
+  const { name, icon, color, description, cond_type, threshold } = req.body || {};
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 40) {
+    return res.status(400).json({ error: 'badge name required (max 40 chars).' });
+  }
+  if (!BADGE_CONDS[cond_type]) return res.status(400).json({ error: 'pick a valid condition.' });
+  const t = parseInt(threshold, 10);
+  if (!Number.isInteger(t) || t < 1 || t > 1000000) {
+    return res.status(400).json({ error: 'threshold must be a whole number of at least 1.' });
+  }
+  if (db.prepare('SELECT id FROM badges WHERE name = ?').get(name.trim())) {
+    return res.status(409).json({ error: 'a badge with that name already exists.' });
+  }
+  const safeIcon = typeof icon === 'string' && icon.trim() ? [...icon.trim()].slice(0, 2).join('') : '★';
+  const safeColor = /^#[0-9a-fA-F]{6}$/.test(color || '') ? color : '#3f6b9a';
+  const info = db
+    .prepare('INSERT INTO badges (name, icon, color, description, cond_type, threshold) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(name.trim(), safeIcon, safeColor, String(description || '').slice(0, 200), cond_type, t);
+  // retroactively award to everyone who already qualifies
+  for (const u of db.prepare('SELECT id FROM users').all()) checkBadges(u.id);
+  res.json({ badge: db.prepare('SELECT * FROM badges WHERE id = ?').get(info.lastInsertRowid) });
+});
+
+app.delete('/api/badges/:id', requireAdmin, (req, res) => {
+  const badge = db.prepare('SELECT id FROM badges WHERE id = ?').get(req.params.id);
+  if (!badge) return res.status(404).json({ error: 'badge not found.' });
+  db.prepare('DELETE FROM badges WHERE id = ?').run(badge.id);
+  res.json({ ok: true });
 });
 
 const DECORS = ['grid', 'stars', 'waves', 'circuit', 'static', 'none'];
@@ -344,6 +521,7 @@ const pages = {
   '/settings': 'settings.html',
   '/admin': 'admin.html',
   '/new': 'new-post.html',
+  '/activity': 'activity.html',
 };
 for (const [route, file] of Object.entries(pages)) {
   app.get(route, (req, res) => res.sendFile(path.join(__dirname, 'public', file)));

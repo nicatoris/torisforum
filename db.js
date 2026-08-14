@@ -66,9 +66,47 @@ CREATE TABLE IF NOT EXISTS likes (
   PRIMARY KEY (post_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  followee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (follower_id, followee_id)
+);
+
+CREATE TABLE IF NOT EXISTS badges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE NOT NULL,
+  icon TEXT NOT NULL DEFAULT '★',
+  color TEXT NOT NULL DEFAULT '#3f6b9a',
+  description TEXT NOT NULL DEFAULT '',
+  cond_type TEXT NOT NULL,
+  threshold INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE TABLE IF NOT EXISTS user_badges (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  badge_id INTEGER NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (user_id, badge_id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  actor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+  badge_id INTEGER REFERENCES badges(id) ON DELETE CASCADE,
+  read INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 CREATE INDEX IF NOT EXISTS idx_posts_board ON posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followee_id);
 `);
 
 // ---- seed admin + starter boards ----
@@ -97,6 +135,17 @@ if (boardCount === 0) {
   ins.run('media', 'media', 'Pictures, clips, and files worth sharing.', '#ef5da8');
   ins.run('tech', 'tech', 'Computers, code, and gear.', '#10b981');
   console.log('[db] seeded starter boards');
+}
+
+const badgeCount = db.prepare('SELECT COUNT(*) AS n FROM badges').get().n;
+if (badgeCount === 0) {
+  const ins = db.prepare(
+    'INSERT INTO badges (name, icon, color, description, cond_type, threshold) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  ins.run('First post', '✎', '#3f6b9a', 'Made your first post.', 'posts', 1);
+  ins.run('Regular', '✦', '#b06f1f', 'Made ten posts.', 'posts', 10);
+  ins.run('Well liked', '♥', '#a83a6e', 'Received ten likes.', 'likes_received', 10);
+  console.log('[db] seeded starter badges');
 }
 
 module.exports = db;

@@ -45,9 +45,13 @@ function avatarHtml(user, size = '') {
 }
 
 /* ── nav ── */
+let UNREAD = 0;
+
 async function initNav() {
   try {
-    ME = (await api('/api/me')).user;
+    const me = await api('/api/me');
+    ME = me.user;
+    UNREAD = me.unread_notifications || 0;
   } catch {
     ME = null;
   }
@@ -63,6 +67,9 @@ async function initNav() {
     ? `<a href="/user?u=${esc(ME.username)}" class="uname cell-r">${avatarHtml(ME)}<span>${esc(
         ME.username
       )}</span></a>
+       <a class="cell-r" href="/activity">Activity${
+         UNREAD ? ` <span class="notif-count">${UNREAD > 99 ? '99+' : UNREAD}</span>` : ''
+       }</a>
        ${ME.is_admin ? '<a class="cell-r" href="/admin">Admin</a>' : ''}
        <a class="cell-r" href="/settings">Settings</a>
        <button class="cell-r" id="logout-btn">Log out</button>`
@@ -507,9 +514,29 @@ const PAGES = {
       $('#profile-root').innerHTML = `<div class="empty" style="margin-top:40px">${esc(e.message)}</div>`;
       return;
     }
-    const { user, posts, stats } = data;
-    document.title = `@${user.username} · TORISFORUM`;
+    const { user, posts, stats, badges, is_following } = data;
+    document.title = `@${user.username} · torisforum`;
     const accent = user.accent || '#2f6bff';
+
+    const isMe = ME && ME.username === user.username;
+    const actionBtn = isMe
+      ? '<a class="btn" href="/settings" style="margin-left:auto;align-self:center">Edit profile</a>'
+      : ME
+      ? `<button class="btn ${is_following ? '' : 'primary'}" id="follow-btn" style="margin-left:auto;align-self:center">${
+          is_following ? 'Unfollow' : 'Follow'
+        }</button>`
+      : '';
+
+    const badgesHtml = badges.length
+      ? `<div class="badge-row">${badges
+          .map(
+            (b) =>
+              `<span class="badge-chip" style="--b-color:${esc(b.color)}" title="${esc(b.description)}"><i>${esc(
+                b.icon
+              )}</i>${esc(b.name)}</span>`
+          )
+          .join('')}</div>`
+      : '';
 
     $('#profile-root').innerHTML = `
       <div class="profile-head" style="--p-accent:${esc(accent)};--p-glow:color-mix(in srgb, ${esc(
@@ -531,17 +558,16 @@ const PAGES = {
                 ).toLocaleDateString()}</span>
               </div>
             </div>
-            ${
-              ME && ME.username === user.username
-                ? '<a class="btn" href="/settings" style="margin-left:auto;align-self:center">Edit profile</a>'
-                : ''
-            }
+            ${actionBtn}
           </div>
           ${user.bio ? `<div class="profile-bio">${esc(user.bio)}</div>` : ''}
+          ${badgesHtml}
           <div class="profile-stats">
             <div class="stat"><b>${stats.posts}</b><span>posts</span></div>
             <div class="stat"><b>${stats.comments}</b><span>comments</span></div>
             <div class="stat"><b>${stats.likes_received}</b><span>likes received</span></div>
+            <div class="stat"><b id="follower-count">${stats.followers}</b><span>followers</span></div>
+            <div class="stat"><b>${stats.following}</b><span>following</span></div>
           </div>
         </div>
       </div>
@@ -552,6 +578,84 @@ const PAGES = {
       ? posts.map((p) => postCardHtml(p)).join('')
       : '<div class="empty">No posts yet</div>';
     bindLikeButtons();
+
+    $('#follow-btn')?.addEventListener('click', async () => {
+      const btn = $('#follow-btn');
+      try {
+        const { following, followers } = await api(`/api/users/${encodeURIComponent(user.username)}/follow`, {
+          method: 'POST',
+        });
+        btn.textContent = following ? 'Unfollow' : 'Follow';
+        btn.classList.toggle('primary', !following);
+        $('#follower-count').textContent = followers;
+      } catch (ex) {
+        alert(ex.message);
+      }
+    });
+  },
+
+  /* ── activity: notifications + following feed ── */
+  async activity() {
+    if (!ME) return (location.href = '/login');
+
+    const panes = { notifications: $('#tab-notifications'), following: $('#tab-following') };
+    $$('.sort-tabs button').forEach((b) =>
+      b.addEventListener('click', () => {
+        $$('.sort-tabs button').forEach((x) => x.classList.remove('active'));
+        b.classList.add('active');
+        for (const [name, el] of Object.entries(panes)) el.hidden = name !== b.dataset.tab;
+      })
+    );
+
+    function notifHtml(n) {
+      const who = n.actor_username
+        ? `<a href="/user?u=${esc(n.actor_username)}"><b>${esc(n.actor_username)}</b></a>`
+        : '';
+      const postLink = n.post_id ? `<a href="/post?id=${n.post_id}">${esc(n.post_title || 'your post')}</a>` : '';
+      let text = '';
+      if (n.type === 'like') text = `${who} liked your post ${postLink}`;
+      else if (n.type === 'comment') text = `${who} commented on your post ${postLink}`;
+      else if (n.type === 'follow') text = `${who} followed you`;
+      else if (n.type === 'badge')
+        text = `You earned the badge <span class="badge-chip" style="--b-color:${esc(
+          n.badge_color || '#3f6b9a'
+        )}"><i>${esc(n.badge_icon || '★')}</i>${esc(n.badge_name || 'badge')}</span>`;
+      else return '';
+      const av = n.actor_username
+        ? avatarHtml({ username: n.actor_username, avatar: n.actor_avatar, accent: n.actor_accent }, 'md')
+        : '<span class="avatar md avatar-fallback" style="background:var(--accent2)">✦</span>';
+      return `
+        <div class="notif ${n.read ? '' : 'unread'}">
+          ${av}
+          <div style="flex:1;min-width:0">
+            <div class="notif-text">${text}</div>
+            <div class="notif-time">${timeAgo(n.created_at)}</div>
+          </div>
+        </div>`;
+    }
+
+    try {
+      const { notifications } = await api('/api/notifications');
+      panes.notifications.innerHTML = notifications.length
+        ? notifications.map(notifHtml).join('')
+        : '<div class="empty">Nothing yet. When someone likes, comments, or follows, it shows up here.</div>';
+      if (notifications.some((n) => !n.read)) {
+        await api('/api/notifications/read', { method: 'POST' });
+        document.querySelectorAll('.notif-count').forEach((el) => el.remove());
+      }
+    } catch (e) {
+      panes.notifications.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    }
+
+    try {
+      const { posts } = await api('/api/feed');
+      panes.following.innerHTML = posts.length
+        ? posts.map((p) => postCardHtml(p)).join('')
+        : '<div class="empty">No posts from people you follow yet. Visit a profile and hit Follow.</div>';
+      bindLikeButtons(panes.following);
+    } catch (e) {
+      panes.following.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    }
   },
 
   /* ── settings ── */
@@ -684,6 +788,77 @@ const PAGES = {
         $('#b-name').value = '';
         $('#b-desc').value = '';
         await loadBoards();
+      } catch (ex) {
+        showErr(err, ex.message);
+      }
+    });
+
+    // ── badges ──
+    let badgeColor = '#3f6b9a';
+    const BADGE_COLORS = ['#3f6b9a', '#b06f1f', '#a83a6e', '#2f7d4f', '#7c5cff', '#b03030', '#4a8f8f', '#5b6a85'];
+    $('#bd-color-pick').innerHTML = BADGE_COLORS.map(
+      (c) => `<div class="cswatch ${c === badgeColor ? 'sel' : ''}" data-c="${c}" style="background:${c}"></div>`
+    ).join('');
+    $$('#bd-color-pick .cswatch').forEach((s) =>
+      s.addEventListener('click', () => {
+        badgeColor = s.dataset.c;
+        $$('#bd-color-pick .cswatch').forEach((x) => x.classList.toggle('sel', x === s));
+      })
+    );
+
+    let condTypes = {};
+    async function loadBadges() {
+      const { badges, cond_types } = await api('/api/badges');
+      condTypes = cond_types;
+      $('#bd-cond').innerHTML = Object.entries(cond_types)
+        .map(([k, label]) => `<option value="${k}">${esc(label)}</option>`)
+        .join('');
+      $('#badge-rows').innerHTML = badges.length
+        ? badges
+            .map(
+              (b) => `
+          <tr>
+            <td><span class="badge-chip" style="--b-color:${esc(b.color)}" title="${esc(b.description)}"><i>${esc(
+                b.icon
+              )}</i>${esc(b.name)}</span></td>
+            <td style="color:var(--dim)">${esc(condTypes[b.cond_type] || b.cond_type)} ≥ ${b.threshold}</td>
+            <td>${b.holder_count}</td>
+            <td><button class="btn ghost danger" data-del-badge="${b.id}" style="padding:2px 8px">×</button></td>
+          </tr>`
+            )
+            .join('')
+        : '<tr><td colspan="4" style="color:var(--dimmer)">No badges yet</td></tr>';
+      $$('[data-del-badge]').forEach((btn) =>
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this badge? Everyone who earned it loses it.')) return;
+          await api(`/api/badges/${btn.dataset.delBadge}`, { method: 'DELETE' });
+          loadBadges();
+        })
+      );
+    }
+    await loadBadges();
+
+    $('#badge-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#badge-err');
+      err.classList.remove('show');
+      try {
+        await api('/api/badges', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: $('#bd-name').value.trim(),
+            icon: $('#bd-icon').value.trim(),
+            description: $('#bd-desc').value.trim(),
+            cond_type: $('#bd-cond').value,
+            threshold: $('#bd-threshold').value,
+            color: badgeColor,
+          }),
+        });
+        $('#bd-name').value = '';
+        $('#bd-icon').value = '';
+        $('#bd-desc').value = '';
+        $('#bd-threshold').value = '1';
+        await loadBadges();
       } catch (ex) {
         showErr(err, ex.message);
       }

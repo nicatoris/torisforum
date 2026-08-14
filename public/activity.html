@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity · torisforum</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <script>try{var t=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="activity">
+  <main class="wrap">
+    <div class="sec-head" style="margin-top:10px"><h2>Activity</h2><div class="rule"></div></div>
+    <div class="sort-tabs" style="margin-bottom:12px">
+      <button class="active" data-tab="notifications">Notifications</button>
+      <button data-tab="following">Following</button>
+    </div>
+    <div id="tab-notifications"><div class="loading">Loading…</div></div>
+    <div id="tab-following" hidden><div class="loading">Loading…</div></div>
+  </main>
+  <script src="/js/md.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

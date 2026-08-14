@@ -433,7 +433,7 @@ h2 .sig { color: var(--accent); }
   color: var(--dim);
   margin-bottom: 4px;
 }
-input[type='text'], input[type='password'], textarea, select {
+input[type='text'], input[type='password'], input[type='number'], textarea, select {
   width: 100%;
   background: var(--field-bg);
   border: 1px solid var(--line2);
@@ -638,6 +638,49 @@ textarea { resize: vertical; min-height: 100px; }
   color: var(--head-text);
   background: var(--accent);
   padding: 2px 7px 1px;
+}
+
+/* earned badges */
+.badge-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--b-color, var(--accent2));
+  border: 1px solid var(--b-color, var(--accent2));
+  background: color-mix(in srgb, var(--b-color, var(--accent2)) 8%, transparent);
+  padding: 2px 8px 1px;
+  white-space: nowrap;
+}
+.badge-chip i { font-style: normal; }
+
+/* notifications */
+.notif {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  margin-top: 3px;
+}
+.notif.unread { border-left: 3px solid var(--accent); background: var(--card2); }
+.notif-text { font-size: 11px; }
+.notif-text a { font-weight: bold; }
+.notif-time { font-size: 9px; color: var(--dimmer); margin-top: 1px; }
+.notif-count {
+  display: inline-block;
+  min-width: 14px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--head-text);
+  background: var(--accent);
+  padding: 1px 4px 0;
+  border-radius: 8px;
+  margin-left: 2px;
 }
 
 /* profile decor patterns */

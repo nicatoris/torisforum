@@ -44,6 +44,52 @@
           </div>
         </div>
       </div>
+
+      <div class="sec-head" style="margin-top:20px"><h2>Badges</h2><span class="tag">awarded automatically when members meet the condition</span><div class="rule"></div></div>
+      <div class="two-col">
+        <div class="win">
+          <div class="win-title">Your badges<div class="dots"><i></i><i></i><i></i></div></div>
+          <div class="win-body">
+            <table class="admin-table">
+              <thead><tr><th>Badge</th><th>Condition</th><th>Holders</th><th></th></tr></thead>
+              <tbody id="badge-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="win">
+          <div class="win-title">Create a badge<div class="dots"><i></i><i></i><i></i></div></div>
+          <div class="win-body">
+            <div class="form-err" id="badge-err"></div>
+            <form id="badge-form">
+              <div class="field">
+                <label for="bd-name">Badge name</label>
+                <input type="text" id="bd-name" maxlength="40" required placeholder="e.g. Chatterbox">
+              </div>
+              <div class="field">
+                <label for="bd-icon">Icon</label>
+                <input type="text" id="bd-icon" maxlength="2" placeholder="a symbol or emoji, e.g. ★">
+              </div>
+              <div class="field">
+                <label for="bd-desc">Description</label>
+                <input type="text" id="bd-desc" maxlength="200" placeholder="How do you earn it?">
+              </div>
+              <div class="field">
+                <label for="bd-cond">Condition</label>
+                <div style="display:flex;gap:6px">
+                  <select id="bd-cond" style="flex:1"></select>
+                  <input type="number" id="bd-threshold" min="1" value="1" style="width:80px" title="How many">
+                </div>
+                <div class="hint">The badge is granted once the number is reached — checked automatically, and existing members who already qualify get it right away.</div>
+              </div>
+              <div class="field">
+                <label>Color</label>
+                <div class="color-pick" id="bd-color-pick"></div>
+              </div>
+              <button class="btn primary" style="width:100%;justify-content:center">Create badge</button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
   <script src="/js/app.js"></script>
