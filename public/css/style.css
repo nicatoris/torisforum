@@ -640,6 +640,7 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .profile-info { padding: 0 16px 14px; margin-top: -30px; position: relative; z-index: 2; }
 .profile-info .row { display: flex; align-items: flex-end; gap: 13px; flex-wrap: wrap; }
+.profile-actions { margin-left: auto; align-self: center; display: flex; gap: 6px; flex-wrap: wrap; }
 .profile-name {
   font-size: 17px;
   font-weight: bold;
@@ -959,6 +960,8 @@ label.file-label:hover { border-color: var(--accent2); color: var(--accent2); }
 
   /* profile */
   .profile-info { padding: 0 12px 14px; }
+  .profile-actions { margin-left: 0; width: 100%; }
+  .profile-actions .btn { flex: 1; justify-content: center; text-align: center; }
   .profile-name { font-size: 15px; }
   .profile-bio { font-size: 12.5px; }
   .profile-stats { width: 100%; }

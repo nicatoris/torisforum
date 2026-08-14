@@ -70,7 +70,6 @@ async function initNav() {
          UNREAD ? ` <span class="notif-count">${UNREAD > 99 ? '99+' : UNREAD}</span>` : ''
        }</a>
        ${ME.is_admin ? '<a class="cell-r" href="/admin">Admin</a>' : ''}
-       <button class="cell-r" id="logout-btn">Log out</button>
        <a href="/user?u=${esc(ME.username)}" class="uname cell-r">${avatarHtml(ME)}<span>${esc(
         ME.username
       )}</span></a>`
@@ -114,11 +113,6 @@ async function initNav() {
       localStorage.setItem('theme', next);
     } catch {}
     paintThemeBtn();
-  });
-
-  $('#logout-btn')?.addEventListener('click', async () => {
-    await api('/api/logout', { method: 'POST' });
-    location.href = '/';
   });
 
   // ── boards dropdown ──
@@ -566,11 +560,16 @@ const PAGES = {
 
     const isMe = ME && ME.username === user.username;
     const actionBtn = isMe
-      ? '<a class="btn" href="/settings" style="margin-left:auto;align-self:center">Edit profile</a>'
+      ? `<div class="profile-actions">
+           <a class="btn" href="/settings">Edit profile</a>
+           <button class="btn ghost" id="logout-btn">Log out</button>
+         </div>`
       : ME
-      ? `<button class="btn ${is_following ? '' : 'primary'}" id="follow-btn" style="margin-left:auto;align-self:center">${
-          is_following ? 'Unfollow' : 'Follow'
-        }</button>`
+      ? `<div class="profile-actions">
+           <button class="btn ${is_following ? '' : 'primary'}" id="follow-btn">${
+             is_following ? 'Unfollow' : 'Follow'
+           }</button>
+         </div>`
       : '';
 
     const badgesHtml = badges.length
@@ -624,6 +623,13 @@ const PAGES = {
       ? posts.map((p) => postCardHtml(p)).join('')
       : '<div class="empty">No posts yet</div>';
     bindLikeButtons();
+
+    $('#logout-btn')?.addEventListener('click', async () => {
+      try {
+        await api('/api/logout', { method: 'POST' });
+      } catch {}
+      location.href = '/';
+    });
 
     $('#follow-btn')?.addEventListener('click', async () => {
       const btn = $('#follow-btn');
