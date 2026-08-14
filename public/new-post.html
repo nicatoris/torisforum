@@ -24,8 +24,22 @@
             <input type="text" id="title" maxlength="140" required placeholder="What's this about?">
           </div>
           <div class="field">
-            <label for="body">Body <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
-            <textarea id="body" maxlength="10000" placeholder="Say more…"></textarea>
+            <label for="body">Body <span style="font-weight:normal">(optional)</span></label>
+            <div class="md-toolbar" id="md-toolbar">
+              <button type="button" data-md="bold" title="Bold"><b>B</b></button>
+              <button type="button" data-md="italic" title="Italic"><i>I</i></button>
+              <button type="button" data-md="strike" title="Strikethrough"><s>S</s></button>
+              <button type="button" data-md="heading" title="Heading">Heading</button>
+              <button type="button" data-md="link" title="Link">Link</button>
+              <button type="button" data-md="quote" title="Quote">Quote</button>
+              <button type="button" data-md="code" title="Code">Code</button>
+              <button type="button" data-md="list" title="Bulleted list">List</button>
+              <span class="mdt-sep"></span>
+              <button type="button" id="md-preview-btn">Preview</button>
+            </div>
+            <textarea id="body" maxlength="10000" placeholder="Say more… formatting is supported, so headings, lists, quotes, links, and code all work."></textarea>
+            <div id="md-preview" class="post-body md-preview" hidden></div>
+            <div class="hint">Select text and use the buttons above, or write the formatting yourself: **bold**, *italic*, # headings, - lists, &gt; quotes, `code`, [links](https://…)</div>
           </div>
           <div class="field">
             <label>Attachment <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
@@ -36,6 +50,7 @@
       </div>
     </div>
   </main>
+  <script src="/js/md.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

@@ -153,7 +153,7 @@ function postCardHtml(p, opts = {}) {
         <span>·</span><span>${timeAgo(p.created_at)}</span>
       </div>
       <a class="post-title" href="/post?id=${p.id}">${esc(p.title)}</a>
-      ${p.body ? `<div class="post-snippet">${esc(p.body)}</div>` : ''}
+      ${p.body ? `<div class="post-snippet">${esc(window.stripMarkdown ? stripMarkdown(p.body) : p.body)}</div>` : ''}
       <div class="post-foot">
         <span>${p.comment_count} comment${p.comment_count === 1 ? '' : 's'}</span>
         ${clip}
@@ -310,6 +310,52 @@ const PAGES = {
       )
       .join('');
 
+    // formatting toolbar
+    const body = $('#body');
+    const surround = (pre, post, placeholder) => {
+      const s = body.selectionStart, e = body.selectionEnd;
+      const sel = body.value.slice(s, e) || placeholder;
+      body.setRangeText(pre + sel + post, s, e);
+      body.focus();
+      body.setSelectionRange(s + pre.length, s + pre.length + sel.length);
+    };
+    const prefixLines = (prefix) => {
+      const s = body.selectionStart, e = body.selectionEnd;
+      const start = body.value.lastIndexOf('\n', s - 1) + 1;
+      const chunk = body.value.slice(start, e || start);
+      const changed = (chunk || 'text').split('\n').map((l) => prefix + l).join('\n');
+      body.setRangeText(changed, start, e, 'end');
+      body.focus();
+    };
+    const actions = {
+      bold: () => surround('**', '**', 'bold text'),
+      italic: () => surround('*', '*', 'italic text'),
+      strike: () => surround('~~', '~~', 'crossed out'),
+      heading: () => prefixLines('## '),
+      link: () => surround('[', '](https://)', 'link text'),
+      quote: () => prefixLines('> '),
+      code: () => {
+        const sel = body.value.slice(body.selectionStart, body.selectionEnd);
+        if (sel.includes('\n')) surround('```\n', '\n```', 'code');
+        else surround('`', '`', 'code');
+      },
+      list: () => prefixLines('- '),
+    };
+    $$('#md-toolbar [data-md]').forEach((b) => b.addEventListener('click', () => actions[b.dataset.md]()));
+
+    const pvBtn = $('#md-preview-btn');
+    const pv = $('#md-preview');
+    pvBtn.addEventListener('click', () => {
+      if (pv.hidden) {
+        pv.innerHTML = body.value.trim() ? renderMarkdown(body.value) : '<span class="hint">Nothing to preview yet.</span>';
+        pv.hidden = false;
+        pvBtn.textContent = 'Hide preview';
+      } else {
+        pv.hidden = true;
+        pvBtn.textContent = 'Preview';
+      }
+    });
+
     const fileInput = $('#attachment');
     fileInput.addEventListener('change', () => {
       $('#file-name').textContent = fileInput.files[0]
@@ -385,7 +431,7 @@ const PAGES = {
             <span>·</span><span>${timeAgo(post.created_at)}</span>
           </div>
           <h1>${esc(post.title)}</h1>
-          ${post.body ? `<div class="post-body">${esc(post.body)}</div>` : ''}
+          ${post.body ? `<div class="post-body">${renderMarkdown(post.body)}</div>` : ''}
           ${attach}
           <div style="display:flex;gap:12px;align-items:center;margin-top:20px">
             <button class="like-btn ${post.liked ? 'liked' : ''}" data-like="${post.id}">♥</button>

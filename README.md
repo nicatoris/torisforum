@@ -60,7 +60,10 @@ mounted at `/var/data`, then set the environment variables
   Admins get the `/admin` panel to create/delete boards (name, description,
   accent color) and can delete any post.
 - **Posts:** title + body + optional attachment (images/video/audio render
-  inline, anything else becomes a download pill; 8MB limit).
+  inline, anything else becomes a download pill; 8MB limit). Bodies support
+  Markdown-style formatting — headings, bold/italic/strikethrough, links,
+  images, quotes, lists, and code blocks — with a toolbar and live preview
+  in the composer, so posts can read like full blog entries.
 - **Home page:** trending feed (engagement score with time decay) +
   newest posts + board directory.
 - **Profiles:** avatar upload, bio, tagline, accent color, and banner decor
